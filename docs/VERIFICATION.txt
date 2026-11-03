@@ -1,0 +1,34 @@
+Slotdove verification — 2026-11-03
+
+Executed successfully in /workspace/slotdove:
+- Strict TypeScript check: passed.
+- Next.js/TypeScript ESLint: passed with no warnings.
+- Vitest: 31 tests passed in 3 files.
+- Real isolated PostgreSQL: all 5 migrations applied; 30 checks passed.
+- Production dependency audit: 0 reported vulnerabilities.
+- Next.js production build: passed, Next.js 16.4.4.
+- Secret scan: no configured server secret in deliverable source or client build assets.
+- .env.local is Git-ignored and has mode 600.
+
+Browser suite:
+- Playwright discovered 12 cases across desktop/mobile projects.
+- Browser cases were NOT executed. The supported managed browser-preview infrastructure is absent.
+
+Live providers:
+- Requested Supabase project: access denied by both configured connector accounts.
+- Remote migration/advisor/security verification: NOT performed.
+- Auth email, Storage HTTP upload, Resend delivery: NOT tested live.
+- No real email sent; no payment processed.
+- Hosting deployment: NOT performed; no live URL exists for this build.
+
+Local configuration presence (values omitted):
+- Supabase URL and publishable key: configured.
+- Resend API credential: configured only in ignored local environment.
+- Locally generated cron and rate-limit secrets: configured.
+- Supabase server secret API key: missing.
+- Verified Resend sender address: missing.
+- Active deployed scheduler: not configured.
+
+The PostgreSQL suite uses a disposable embedded server with minimal Auth/Storage fixtures.
+It proves database-level behavior locally, not end-to-end hosted Supabase behavior.
+The complete feature/status and remaining setup list is in docs/STATUS.md and README.md.

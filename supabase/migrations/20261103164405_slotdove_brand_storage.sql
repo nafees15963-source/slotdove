@@ -1,0 +1,10 @@
+alter table public.businesses add column logo_path text check(logo_path is null or (length(logo_path)<200 and logo_path like id::text||'/%'));
+grant update(logo_path) on public.businesses to authenticated;
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('business-logos','business-logos',true,2097152,array['image/png','image/jpeg','image/webp']) on conflict(id) do nothing;
+create function private.logo_business(path text) returns uuid language plpgsql immutable set search_path='' as $$begin return split_part(path,'/',1)::uuid;exception when invalid_text_representation then return null;end $$;
+revoke all on function private.logo_business(text) from public;
+grant execute on function private.logo_business(text) to authenticated;
+create policy slotdove_logo_read on storage.objects for select to authenticated using(bucket_id='business-logos' and private.business_role(private.logo_business(name)) in('owner','admin'));
+create policy slotdove_logo_insert on storage.objects for insert to authenticated with check(bucket_id='business-logos' and private.business_role(private.logo_business(name)) in('owner','admin'));
+create policy slotdove_logo_update on storage.objects for update to authenticated using(bucket_id='business-logos' and private.business_role(private.logo_business(name)) in('owner','admin')) with check(bucket_id='business-logos' and private.business_role(private.logo_business(name)) in('owner','admin'));
+create policy slotdove_logo_delete on storage.objects for delete to authenticated using(bucket_id='business-logos' and private.business_role(private.logo_business(name)) in('owner','admin'));
