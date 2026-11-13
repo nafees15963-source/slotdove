@@ -12,7 +12,7 @@ export default async function Page() {
   const {
     data: { user },
   } = await db.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) redirect('/admin/login');
   const { data } = await db.rpc('my_platform_role');
   if (!data)
     return (

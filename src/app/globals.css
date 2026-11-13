@@ -2211,6 +2211,130 @@ tbody tr:hover {
     white-space: nowrap;
   }
 }
+.sidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.page-heading h1 {
+  text-wrap: balance;
+}
+.page-heading > .row {
+  flex-wrap: wrap;
+}
+.panel {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.metric {
+  background: linear-gradient(135deg, var(--surface), var(--purple-soft));
+}
+.nav-link.active {
+  box-shadow: inset 3px 0 var(--purple);
+}
+.nav-pending {
+  margin-left: auto;
+  display: inline-flex;
+}
+.nav-pending .spinner {
+  width: 14px;
+  height: 14px;
+}
+.password-input {
+  position: relative;
+}
+.password-input input {
+  padding-right: 48px;
+}
+.password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+}
+.mobile-site-menu {
+  display: none;
+  position: relative;
+}
+.mobile-site-menu summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.mobile-site-menu > div {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  z-index: 60;
+  width: 210px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.mobile-site-menu a {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+.mobile-site-menu a:hover {
+  background: var(--purple-soft);
+}
+@media (hover: hover) {
+  .panel:hover {
+    border-color: color-mix(in srgb, var(--purple) 25%, var(--line));
+  }
+  .btn-primary:hover {
+    box-shadow: 0 5px 16px color-mix(in srgb, var(--purple) 25%, transparent);
+  }
+}
+@media (max-width: 800px) {
+  .mobile-site-menu {
+    display: block;
+  }
+  .market-links {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+  .page-heading > .row {
+    width: 100%;
+  }
+  .nav-link {
+    min-height: 44px;
+  }
+  .market-nav {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .market-nav-actions {
+    margin-left: auto;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,

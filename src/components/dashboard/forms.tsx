@@ -18,11 +18,13 @@ export function EntityForm({
   open,
   onClose,
   initial,
+  inviteStaffId,
 }: {
   kind: FormKind;
   open: boolean;
   onClose: () => void;
   initial?: Service | Customer | Staff;
+  inviteStaffId?: string;
 }) {
   const { t, locale } = useI18n(),
     w = useWorkspace(),
@@ -234,7 +236,7 @@ export function EntityForm({
                 {input('email', t.email, 'email')}
                 <div className="field">
                   <label htmlFor="invite-staff">{t.employee}</label>
-                  <select name="staff_id" id="invite-staff">
+                  <select name="staff_id" id="invite-staff" defaultValue={inviteStaffId || ''}>
                     <option value="">
                       {locale === 'de' ? 'Neues Teammitglied' : 'New team member'}
                     </option>
@@ -426,6 +428,40 @@ export function BookingDetail({
             </Button>
           </form>
           <div className="row wrap">
+            {w.role !== 'staff' &&
+              ['cancelled', 'completed', 'no_show'].includes(booking.status) && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        locale === 'de'
+                          ? 'Diesen Termin samt Verlauf und Benachrichtigungen endgültig löschen? Das kann nicht rückgängig gemacht werden.'
+                          : 'Permanently delete this appointment, history and notifications? This cannot be undone.',
+                      )
+                    )
+                      return;
+                    setBusy(true);
+                    try {
+                      await api(
+                        `/api/businesses/${w.business.id}/bookings?item=${booking.id}`,
+                        'DELETE',
+                      );
+                      onClose();
+                      router.refresh();
+                      toast.success(t.saved);
+                    } catch (e) {
+                      toast.error(friendlyError(e, locale));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {t.delete}
+                </Button>
+              )}
             <Button variant="outline" size="sm" asChild>
               <a href={`/api/businesses/${w.business.id}/calendar-export?item=${booking.id}`}>
                 <Download size={13} />

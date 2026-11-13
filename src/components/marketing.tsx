@@ -29,6 +29,16 @@ export async function MarketingNav() {
     <div className="market-container">
       <nav className="market-nav">
         <Brand />
+        <details className="mobile-site-menu">
+          <summary aria-label="Navigation">☰</summary>
+          <div>
+            <Link href="/#product">{t.product}</Link>
+            <Link href="/#features">{t.features}</Link>
+            <Link href="/#solutions">{t.solutions}</Link>
+            <Link href="/#pricing">{t.pricing}</Link>
+            <Link href="/login">{t.login}</Link>
+          </div>
+        </details>
         <div className="market-links">
           <Link href="/#product">{t.product}</Link>
           <Link href="/#features">{t.features}</Link>
@@ -74,6 +84,9 @@ export async function MarketingFooter() {
               <strong>{m.companyLinks}</strong>
               <Link href="/about">{t.about}</Link>
               <Link href="/contact">{t.contact}</Link>
+              <Link href="/admin/login">
+                {locale === 'de' ? 'Plattformverwaltung' : 'Platform administration'}
+              </Link>
               <Link href="/#faq">{t.faq}</Link>
             </div>
             <div>

@@ -10,9 +10,16 @@ export async function loadWorkspace(businessId?: string) {
     data: { user },
   } = await db.auth.getUser();
   if (!user) redirect('/login');
+  const { data: memberships, error: membershipError } = await db
+    .from('business_members')
+    .select('business_id')
+    .eq('user_id', user.id);
+  if (membershipError) throw new Error('WORKSPACE_UNAVAILABLE');
+  const memberIds = (memberships || []).map((m) => m.business_id);
   const { data: businesses, error } = await db
     .from('businesses')
     .select('*')
+    .or(`owner_id.eq.${user.id}${memberIds.length ? `,id.in.(${memberIds.join(',')})` : ''}`)
     .order('created_at')
     .limit(100);
   if (error) throw new Error('WORKSPACE_UNAVAILABLE');

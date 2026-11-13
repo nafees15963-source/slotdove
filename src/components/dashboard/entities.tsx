@@ -30,6 +30,7 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
     [edit, setEdit] = useState<Service | Customer | Staff | undefined>(),
     [open, setOpen] = useState(false),
     [invite, setInvite] = useState(false),
+    [inviteStaff, setInviteStaff] = useState<string | undefined>(),
     [assign, setAssign] = useState<Service | null>(null),
     [history, setHistory] = useState<Customer | null>(null),
     [customers, setCustomers] = useState<Customer[]>(w.customers),
@@ -125,7 +126,13 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
               </Button>
             )}
             {kind === 'staff' && w.role === 'owner' && (
-              <Button variant="outline" onClick={() => setInvite(true)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setInviteStaff(undefined);
+                  setInvite(true);
+                }}
+              >
                 <UserPlus size={14} />
                 {t.invitation}
               </Button>
@@ -191,16 +198,16 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
                   <Button size="sm" variant="outline" onClick={() => onEdit(s)}>
                     {t.edit}
                   </Button>
-                  {s.active && (
+                  {
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => remove(s.id)}
-                      aria-label={t.archive}
+                      aria-label={t.delete}
                     >
                       <Trash2 size={13} />
                     </Button>
-                  )}
+                  }
                 </div>
               </div>
             </div>
@@ -219,6 +226,15 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
                 </span>
               </div>
               <h3 style={{ margin: '22px 0 7px' }}>{s.name}</h3>
+              <p className="muted">
+                {s.user_id
+                  ? locale === 'de'
+                    ? 'Mit Benutzerkonto verbunden'
+                    : 'Connected to an account'
+                  : locale === 'de'
+                    ? 'Mitarbeiterprofil · noch kein Login verbunden'
+                    : 'Staff profile · no account connected yet'}
+              </p>
               <p style={{ fontSize: 11 }}>
                 {w.assignments.filter((a) => a.staff_id === s.id).length} {t.services} ·{' '}
                 {w.availability.filter((a) => a.staff_id === s.id).length} {t.businessHours}
@@ -227,16 +243,28 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
                 <Button variant="outline" size="sm" onClick={() => onEdit(s)}>
                   {t.edit}
                 </Button>
-                {s.active && (
+                {!s.user_id && s.active && w.role === 'owner' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setInviteStaff(s.id);
+                      setInvite(true);
+                    }}
+                  >
+                    {t.invitation}
+                  </Button>
+                )}
+                {
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => remove(s.id)}
-                    aria-label={t.archive}
+                    aria-label={t.delete}
                   >
                     <Trash2 size={14} />
                   </Button>
-                )}
+                }
               </div>
             </div>
           ))}
@@ -324,7 +352,14 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
           initial={edit}
         />
       )}
-      {invite && <EntityForm kind="invite" open onClose={() => setInvite(false)} />}
+      {invite && (
+        <EntityForm
+          kind="invite"
+          open
+          inviteStaffId={inviteStaff}
+          onClose={() => setInvite(false)}
+        />
+      )}
       <Dialog open={!!assign} onOpenChange={(v) => !v && setAssign(null)} title={t.assign}>
         {assign && (
           <div className="stack">

@@ -20,6 +20,7 @@ import { Dialog } from './ui/dialog';
 import { Heading, Empty } from './dashboard/common';
 import { useI18n } from './providers';
 import { api, friendlyError } from '@/lib/api-client';
+import { useRouter } from 'next/navigation';
 type AdminBusiness = {
   id: string;
   name: string;
@@ -33,13 +34,24 @@ type AdminBusiness = {
   business_entitlements: { plan_id: string };
 };
 type AdminData = {
+  accounts: { id: string; email?: string; confirmed: boolean; last_sign_in_at?: string }[];
+  notifications: {
+    id: string;
+    business_id: string;
+    kind: string;
+    status: string;
+    last_error: string | null;
+    created_at: string;
+  }[];
   businesses: AdminBusiness[];
   bookingCount: number;
   audit: { id: number; action: string; business_id: string; created_at: string }[];
 };
 export function Admin() {
+  const router = useRouter();
   const { t, locale } = useI18n();
   const [data, setData] = useState<AdminData | null>(null),
+    [tab, setTab] = useState('businesses'),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [open, setOpen] = useState(false),
@@ -93,12 +105,26 @@ export function Admin() {
               {t.dashboard}
             </Link>
             <Preferences />
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await api('/api/auth', 'POST', { action: 'logout' });
+                  router.push('/admin/login');
+                  router.refresh();
+                } catch (e) {
+                  toast.error(friendlyError(e, locale));
+                }
+              }}
+            >
+              {t.logout}
+            </Button>
           </div>
         </header>
       </div>
       <main className="app-content" style={{ maxWidth: 1250 }}>
         <Heading
-          title={t.admin}
+          title="Slotdove Control Center"
           description={
             locale === 'de'
               ? 'Unternehmen, Zugang und Demos. Unter deiner Kontrolle.'
@@ -111,13 +137,109 @@ export function Admin() {
             </Button>
           }
         />
+        <nav className="row wrap" aria-label="Platform navigation" style={{ marginBottom: 24 }}>
+          {(
+            [
+              ['businesses', locale === 'de' ? 'Unternehmen' : 'Businesses'],
+              ['accounts', locale === 'de' ? 'Benutzerkonten' : 'Accounts'],
+              ['operations', locale === 'de' ? 'E-Mail-Betrieb' : 'Email operations'],
+            ] as const
+          ).map(([key, label]) => (
+            <Button
+              key={key}
+              variant={tab === key ? 'default' : 'outline'}
+              onClick={() => setTab(key)}
+              aria-pressed={tab === key}
+            >
+              {label}
+            </Button>
+          ))}
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              setError('');
+              void load();
+            }}
+          >
+            {locale === 'de' ? 'Aktualisieren' : 'Refresh'}
+          </Button>
+        </nav>
+        {data && tab === 'accounts' && (
+          <section className="panel table-wrap">
+            <div className="panel-head">
+              <h2>{locale === 'de' ? 'Benutzerkonten · bis zu 100' : 'Accounts · up to 100'}</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>E-Mail</th>
+                  <th>{t.status}</th>
+                  <th>{locale === 'de' ? 'Letzte Anmeldung' : 'Last sign in'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.accounts.map((u) => (
+                  <tr key={u.id}>
+                    <td>{u.email}</td>
+                    <td>
+                      {u.confirmed
+                        ? locale === 'de'
+                          ? 'Bestätigt'
+                          : 'Verified'
+                        : locale === 'de'
+                          ? 'Bestätigung offen'
+                          : 'Unverified'}
+                    </td>
+                    <td>
+                      {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString(locale) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+        {data && tab === 'operations' && (
+          <section className="panel panel-body stack">
+            <h2>
+              {locale === 'de'
+                ? 'Fehlgeschlagene Buchungs-E-Mails · letzte 50'
+                : 'Failed booking emails · latest 50'}
+            </h2>
+            <p>
+              {locale === 'de'
+                ? 'Erfasst Buchungsbenachrichtigungen. Einladungs-E-Mails sind nicht in dieser Warteschlange. Automatische Verarbeitung benötigt einen eingerichteten Scheduler.'
+                : 'Includes booking notifications. Invitations are not in this queue. Automatic processing requires a configured scheduler.'}
+            </p>
+            {data.notifications.length ? (
+              data.notifications.map((n) => (
+                <div className="spread" key={n.id}>
+                  <span>
+                    {data.businesses.find((b) => b.id === n.business_id)?.name || n.business_id} ·{' '}
+                    {n.kind}
+                  </span>
+                  <span>
+                    {n.status} · {n.last_error || '—'}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p>
+                {locale === 'de'
+                  ? 'Keine fehlgeschlagenen Einträge gespeichert.'
+                  : 'No failed entries recorded.'}
+              </p>
+            )}
+          </section>
+        )}
         {error && (
           <p className="notice notice-error" role="alert">
             {error}
           </p>
         )}
         {!data && !error && <p>{t.loading}</p>}
-        {data && (
+        {data && tab === 'businesses' && (
           <>
             <div className="grid-4">
               {[
@@ -226,6 +348,22 @@ export function Admin() {
                           </td>
                           <td>
                             <div className="row wrap">
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() => {
+                                  const name = prompt(
+                                    locale === 'de'
+                                      ? `Unternehmen mit allen Terminen, Kunden und Teamdaten endgültig löschen? Zur Bestätigung exakt „${b.name}“ eingeben. Benutzerkonten bleiben bestehen.`
+                                      : `Permanently delete this business, appointments, customers and staff? Type exactly "${b.name}" to confirm. User accounts are retained.`,
+                                  );
+                                  if (name === b.name)
+                                    void action({ action: 'delete', id: b.id, confirm_name: name });
+                                }}
+                              >
+                                {t.delete}
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"

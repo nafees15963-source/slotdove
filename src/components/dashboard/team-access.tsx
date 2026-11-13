@@ -71,7 +71,9 @@ export function TeamAccess({ refreshKey }: { refreshKey: boolean }) {
       {error && <p className="notice notice-error">{error}</p>}
       <div className="panel">
         <div className="panel-head">
-          <h2 className="panel-title">{t.role}</h2>
+          <h2 className="panel-title">
+            {locale === 'de' ? 'Konten mit Teamzugang' : 'Accounts with team access'}
+          </h2>
           <ShieldCheck size={17} className="purple" />
         </div>
         <div className="panel-body stack">
@@ -108,8 +110,8 @@ export function TeamAccess({ refreshKey }: { refreshKey: boolean }) {
           ) : (
             <p style={{ fontSize: 12 }}>
               {locale === 'de'
-                ? 'Noch keine weiteren Konten verbunden. Lade ein Teammitglied ein.'
-                : 'No other accounts connected yet. Invite a team member to get started.'}
+                ? 'Deine Mitarbeiterprofile stehen oben. Ein Login erscheint hier, sobald die Person ihre Einladung angenommen hat.'
+                : 'Your staff profiles appear above. An account appears here once the person accepts their invitation.'}
             </p>
           )}
         </div>
@@ -155,22 +157,19 @@ export function TeamAccess({ refreshKey }: { refreshKey: boolean }) {
                     </span>
                   </td>
                   <td>
-                    {!i.accepted_at && !i.revoked_at && w.role === 'owner' && (
+                    {w.role === 'owner' && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={locale === 'de' ? 'Einladung widerrufen' : 'Revoke invitation'}
+                        aria-label={t.delete}
                         onClick={async () => {
+                          if (!confirm(t.deleteConfirm)) return;
                           try {
                             await api(
                               `/api/businesses/${w.business.id}/invitations?item=${i.id}`,
                               'DELETE',
                             );
-                            setInvitations((list) =>
-                              list.map((x) =>
-                                x.id === i.id ? { ...x, revoked_at: new Date().toISOString() } : x,
-                              ),
-                            );
+                            setInvitations((list) => list.filter((x) => x.id !== i.id));
                             toast.success(t.saved);
                           } catch (e) {
                             toast.error(friendlyError(e, locale));

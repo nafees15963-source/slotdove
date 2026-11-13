@@ -15,7 +15,7 @@ export async function GET() {
   try {
     await requireAdmin();
     const db = supabaseAdmin();
-    const [businesses, stats, audit] = await Promise.all([
+    const [businesses, stats, audit, accounts, notifications] = await Promise.all([
       db
         .from('businesses')
         .select(
@@ -29,10 +29,28 @@ export async function GET() {
         .select('id,action,business_id,created_at')
         .order('created_at', { ascending: false })
         .limit(30),
+      db.auth.admin.listUsers({ page: 1, perPage: 100 }),
+      db
+        .from('notification_jobs')
+        .select('id,business_id,kind,status,last_error,created_at')
+        .in('status', ['failed', 'unavailable'])
+        .order('created_at', { ascending: false })
+        .limit(50),
     ]);
-    if (businesses.error || stats.error || audit.error)
-      throw businesses.error || stats.error || audit.error;
-    return json({ businesses: businesses.data, bookingCount: stats.count, audit: audit.data });
+    if (businesses.error || stats.error || audit.error || accounts.error || notifications.error)
+      throw businesses.error || stats.error || audit.error || accounts.error || notifications.error;
+    return json({
+      businesses: businesses.data,
+      bookingCount: stats.count,
+      audit: audit.data,
+      accounts: accounts.data.users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        confirmed: !!u.email_confirmed_at,
+        last_sign_in_at: u.last_sign_in_at,
+      })),
+      notifications: notifications.data,
+    });
   } catch (e) {
     return failure(e);
   }
@@ -44,7 +62,16 @@ export async function POST(request: Request) {
       db = supabaseAdmin(),
       input = await body(request);
     let result: unknown;
-    if (input.action === 'create') {
+    if (input.action === 'delete') {
+      const v = z.object({ id: z.uuid(), confirm_name: z.string().min(2).max(100) }).parse(input);
+      const { error } = await db.rpc('delete_business_server', {
+        p_business: v.id,
+        p_actor: user.id,
+        p_name: v.confirm_name,
+      });
+      if (error) throw error;
+      result = { ok: true };
+    } else if (input.action === 'create') {
       const b = businessSchema.parse(input);
       const demo = z.boolean().parse(input.is_demo),
         plan = z.enum(['free', 'pro', 'business']).parse(input.plan);

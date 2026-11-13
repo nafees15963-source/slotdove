@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <main className="app-content">
+    <div aria-busy="true" aria-label="Loading dashboard">
       <div className="skeleton" style={{ width: 240, height: 30, marginBottom: 30 }} />
       <div className="grid-4">
         {[0, 1, 2, 3].map((i) => (
@@ -10,6 +10,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

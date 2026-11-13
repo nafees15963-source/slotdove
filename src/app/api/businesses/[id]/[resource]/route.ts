@@ -247,9 +247,15 @@ export async function DELETE(request: Request, context: Context) {
     const { db } = await requireBusiness(id);
     const item = z.uuid().parse(new URL(request.url).searchParams.get('item'));
     if (
-      !['customers', 'availability', 'blocks', 'services', 'staff', 'invitations'].includes(
-        resource,
-      )
+      ![
+        'customers',
+        'availability',
+        'blocks',
+        'services',
+        'staff',
+        'invitations',
+        'bookings',
+      ].includes(resource)
     )
       throw new HttpError(400, 'INVALID_INPUT');
     if (resource === 'invitations') {
@@ -257,17 +263,17 @@ export async function DELETE(request: Request, context: Context) {
       if (role !== 'owner') throw new HttpError(403, 'FORBIDDEN');
       const { error } = await supabaseAdmin()
         .from('business_invitations')
-        .update({ revoked_at: new Date().toISOString() })
+        .delete()
         .eq('id', item)
         .eq('business_id', id);
       if (error) throw error;
       return json({ ok: true });
     }
-    const query = ['services', 'staff'].includes(resource)
-      ? db.from(tables[resource]).update({ active: false })
-      : db.from(tables[resource]).delete();
-    const { error } = await query.eq('business_id', id).eq('id', item);
+    const query = db.from(tables[resource]).delete();
+    const { data: deleted, error } = await query.eq('business_id', id).eq('id', item).select('id');
     if (error) throw error;
+    if (!deleted?.length)
+      throw new HttpError(409, resource === 'bookings' ? 'CANCEL_BEFORE_DELETE' : 'NOT_FOUND');
     return json({ ok: true });
   } catch (e) {
     return failure(e);

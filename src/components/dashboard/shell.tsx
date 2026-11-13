@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useContext, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -31,6 +31,7 @@ import { api } from '@/lib/api-client';
 import type { Business, Workspace } from '@/lib/types';
 import type { Messages } from '@/lib/i18n/en';
 import { toast } from 'sonner';
+import { NavigationFeedback } from '../navigation-feedback';
 const WorkspaceContext = createContext<Workspace | null>(null);
 export function useWorkspace() {
   const w = useContext(WorkspaceContext);
@@ -57,19 +58,18 @@ export function DashboardShell({
   businesses,
   user,
   isAdmin,
-  section,
   children,
 }: {
   workspace: Workspace;
   businesses: Business[];
   user: { id: string; email: string };
   isAdmin: boolean;
-  section: string;
   children: React.ReactNode;
 }) {
   const { t } = useI18n(),
     router = useRouter();
   const [open, setOpen] = useState(false);
+  const section = usePathname().split('/')[2] || 'overview';
   const title = t[section as keyof Messages] || t.overview;
   async function logout() {
     try {
@@ -112,6 +112,8 @@ export function DashboardShell({
             {sections.map(([key, Icon], i) => (
               <Link
                 key={key}
+                prefetch={true}
+                aria-current={section === key ? 'page' : undefined}
                 className={`nav-link ${section === key ? 'active' : ''}`}
                 style={i === 10 ? { marginTop: 14 } : undefined}
                 href={key === 'overview' ? '/dashboard' : `/dashboard/${key}`}
@@ -119,6 +121,7 @@ export function DashboardShell({
               >
                 <Icon size={16} strokeWidth={1.6} />
                 {t[key]}
+                <NavigationFeedback />
                 {key === 'booking' && <ArrowUpRight size={12} style={{ marginLeft: 'auto' }} />}
               </Link>
             ))}

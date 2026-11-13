@@ -485,6 +485,89 @@ try {
       0,
     );
   });
+  await test('permanent service deletion is tenant scoped and preserves linked appointments', async () => {
+    const own = (
+      await db.query(
+        "insert into services(business_id,name,duration_minutes) values($1,'Delete me',30) returning id",
+        [b1],
+      )
+    ).rows[0].id;
+    const other = (
+      await db.query(
+        "insert into services(business_id,name,duration_minutes) values($1,'Other tenant',30) returning id",
+        [b2],
+      )
+    ).rows[0].id;
+    assert.equal((await user.query('delete from services where id=$1', [other])).rowCount, 0);
+    assert.equal((await user.query('delete from services where id=$1', [own])).rowCount, 1);
+    await assert.rejects(user.query('delete from services where id=$1', [s]), /foreign key/i);
+  });
+  await test('deleting a staff profile revokes membership and removes linked invitations', async () => {
+    const uid = randomUUID();
+    await db.query("insert into auth.users(id,email) values($1,'remove-staff@example.test')", [
+      uid,
+    ]);
+    await db.query("insert into business_members(business_id,user_id,role) values($1,$2,'staff')", [
+      b1,
+      uid,
+    ]);
+    const sid = (
+      await db.query(
+        "insert into staff_profiles(business_id,name,user_id) values($1,'Delete profile',$2) returning id",
+        [b1, uid],
+      )
+    ).rows[0].id;
+    await db.query(
+      "insert into business_invitations(business_id,email,role,staff_id) values($1,'new@example.test','staff',$2)",
+      [b1, sid],
+    );
+    assert.equal((await user.query('delete from staff_profiles where id=$1', [sid])).rowCount, 1);
+    assert.equal(
+      (await db.query('select * from business_members where user_id=$1', [uid])).rowCount,
+      0,
+    );
+    assert.equal(
+      (await db.query('select * from business_invitations where staff_id=$1', [sid])).rowCount,
+      0,
+    );
+  });
+  await test('active bookings cannot be deleted and cancelled bookings can', async () => {
+    const target = (
+      await db.query(
+        "select id from bookings where business_id=$1 and status='confirmed' limit 1",
+        [b1],
+      )
+    ).rows[0].id;
+    assert.equal((await user.query('delete from bookings where id=$1', [target])).rowCount, 0);
+    await user.query("update bookings set status='cancelled' where id=$1", [target]);
+    assert.equal((await user.query('delete from bookings where id=$1', [target])).rowCount, 1);
+    assert.equal(
+      (await db.query('select * from notification_jobs where booking_id=$1', [target])).rowCount,
+      0,
+    );
+  });
+  await test('tenant deletion requires platform admin and exact name; keeps audit', async () => {
+    await assert.rejects(
+      db.query('select delete_business_server($1,$2,$3)', [b2, u2, 'Business B']),
+      /FORBIDDEN/,
+    );
+    await assert.rejects(
+      db.query('select delete_business_server($1,$2,$3)', [b2, u1, 'Wrong name']),
+      /INVALID_INPUT/,
+    );
+    await db.query('select delete_business_server($1,$2,$3)', [b2, u1, 'Business B']);
+    assert.equal((await db.query('select * from businesses where id=$1', [b2])).rowCount, 0);
+    assert.equal(
+      (
+        await db.query(
+          "select * from admin_audit_logs where action='business.deleted' and details->>'business_id'=$1",
+          [b2],
+        )
+      ).rowCount,
+      1,
+    );
+    assert.equal((await db.query('select * from businesses where id=$1', [b1])).rowCount, 1);
+  });
   await test('suspended tenant loses private data access', async () => {
     await db.query("select admin_update_business($1,'suspended','free',$2)", [b1, u1]);
     assert.equal(

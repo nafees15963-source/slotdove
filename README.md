@@ -2,7 +2,7 @@
 
 A Next.js scheduling application with a bilingual interface, Supabase persistence, tenant-aware authorization, transactional bookings, and a Resend notification queue.
 
-**Current state:** the application builds, type checks, lints, and passes the local automated checks listed in [docs/STATUS.md](docs/STATUS.md). It has **not been deployed or verified against the supplied live Supabase project**. Both connected Supabase accounts returned a permission error for the requested project. The managed environment also lacks the Sites publishing helpers and its supported browser-preview infrastructure. Nothing has been substituted with localStorage or fake business records.
+**Current state:** the application is deployed by the owner on Vercel, and the schema has been applied to the connected Supabase project. See the [November 13 update](docs/UPDATE-2026-11-13.md) for dashboard performance, permanent deletion, the separate admin entrance and validation limits. Earlier delivery documents describe the initial handoff. General email delivery still requires a verified sender and notification scheduler.
 
 ## Run locally
 

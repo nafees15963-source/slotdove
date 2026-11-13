@@ -17,6 +17,10 @@ export function friendlyError(error: unknown, locale: string) {
   const code = error instanceof Error ? error.message : '';
   const de = locale === 'de';
   const errors: Record<string, [string, string]> = {
+    CANCEL_BEFORE_DELETE: [
+      'Cancel the appointment before permanently deleting it.',
+      'Storniere den Termin, bevor du ihn endgültig löschst.',
+    ],
     STAFF_ALREADY_LINKED: [
       'This team profile is already connected to an account.',
       'Dieses Teamprofil ist bereits mit einem Konto verbunden.',
@@ -60,8 +64,8 @@ export function friendlyError(error: unknown, locale: string) {
       'Lege eine aktive Leistung an, ordne ein Teammitglied zu und hinterlege Arbeitszeiten.',
     ],
     RECORD_IN_USE: [
-      'This record has appointment history and cannot be deleted.',
-      'Dieser Eintrag wird von bestehenden Terminen verwendet und kann nicht gelöscht werden.',
+      'This record is linked to appointments. Remove those appointments first, or deactivate the record in Edit.',
+      'Dieser Eintrag ist mit Terminen verknüpft. Lösche zuerst diese Termine oder deaktiviere den Eintrag unter Bearbeiten.',
     ],
     FORBIDDEN: [
       'You do not have permission for this action.',

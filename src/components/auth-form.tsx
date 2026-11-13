@@ -2,16 +2,23 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { Brand } from './brand';
 import { Preferences } from './preferences';
 import { useI18n } from './providers';
 import { Button } from './ui/button';
 import { api, friendlyError } from '@/lib/api-client';
-export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'reset' | 'update' }) {
+export function AuthForm({
+  mode,
+  admin = false,
+}: {
+  mode: 'login' | 'signup' | 'reset' | 'update';
+  admin?: boolean;
+}) {
   const { t, locale } = useI18n(),
     router = useRouter();
   const [busy, setBusy] = useState(false),
+    [showPassword, setShowPassword] = useState(false),
     [error, setError] = useState(''),
     [success, setSuccess] = useState('');
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -27,7 +34,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'reset' | 'updat
         name: f.get('name') || undefined,
       });
       if (mode === 'login') {
-        router.push('/dashboard');
+        router.push(admin ? '/admin' : '/dashboard');
         router.refresh();
       } else
         setSuccess(mode === 'signup' ? t.checkEmail : mode === 'reset' ? t.resetSent : t.saved);
@@ -63,7 +70,13 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'reset' | 'updat
               </>
             )}
           </h1>
-          <p>{t.authSub}</p>
+          <p>
+            {admin
+              ? locale === 'de'
+                ? 'Slotdove Plattformverwaltung. Unternehmen, Zugänge und Betrieb an einem Ort.'
+                : 'Slotdove platform administration. Businesses, access and operations in one place.'
+              : t.authSub}
+          </p>
         </div>
         <div className="row muted" style={{ fontSize: 11 }}>
           <ShieldCheck size={15} />
@@ -81,17 +94,25 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'reset' | 'updat
             <Brand compact />
           </div>
           <h1>
-            {mode === 'login'
-              ? t.loginTitle
-              : mode === 'signup'
-                ? t.signupTitle
-                : mode === 'reset'
-                  ? t.reset
-                  : t.changePassword}
+            {admin
+              ? locale === 'de'
+                ? 'Plattform-Admin anmelden'
+                : 'Platform administrator sign in'
+              : mode === 'login'
+                ? t.loginTitle
+                : mode === 'signup'
+                  ? t.signupTitle
+                  : mode === 'reset'
+                    ? t.reset
+                    : t.changePassword}
           </h1>
           <p>
             {mode === 'login'
-              ? t.authSub
+              ? admin
+                ? locale === 'de'
+                  ? 'Nur für freigeschaltete Plattform-Administratoren. Kein Unternehmens-Onboarding erforderlich.'
+                  : 'For authorized platform administrators. No business onboarding required.'
+                : t.authSub
               : mode === 'signup'
                 ? t.setupText
                 : locale === 'de'
@@ -138,15 +159,34 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'reset' | 'updat
                       </Link>
                     )}
                   </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    minLength={12}
-                    maxLength={128}
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  />
+                  <div className="password-input">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={12}
+                      maxLength={128}
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      aria-label={
+                        locale === 'de'
+                          ? showPassword
+                            ? 'Passwort verbergen'
+                            : 'Passwort anzeigen'
+                          : showPassword
+                            ? 'Hide password'
+                            : 'Show password'
+                      }
+                      aria-pressed={showPassword}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                   {mode !== 'login' && (
                     <small>
                       {locale === 'de' ? 'Mindestens 12 Zeichen.' : 'At least 12 characters.'}
@@ -175,12 +215,14 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' | 'reset' | 'updat
               </Button>
             </form>
           )}
-          <div className="auth-foot">
-            {mode === 'login' ? t.noAccount : t.hasAccount}{' '}
-            <Link href={mode === 'login' ? '/signup' : '/login'}>
-              {mode === 'login' ? t.signUp : t.login}
-            </Link>
-          </div>
+          {!admin && (
+            <div className="auth-foot">
+              {mode === 'login' ? t.noAccount : t.hasAccount}{' '}
+              <Link href={mode === 'login' ? '/signup' : '/login'}>
+                {mode === 'login' ? t.signUp : t.login}
+              </Link>
+            </div>
+          )}
           <div className="auth-foot" style={{ marginTop: 40, fontSize: 10 }}>
             <Link href="/privacy">{t.privacy}</Link> · <Link href="/terms">{t.terms}</Link>
           </div>
