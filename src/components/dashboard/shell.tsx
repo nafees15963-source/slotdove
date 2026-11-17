@@ -32,6 +32,7 @@ import type { Business, Workspace } from '@/lib/types';
 import type { Messages } from '@/lib/i18n/en';
 import { toast } from 'sonner';
 import { NavigationFeedback } from '../navigation-feedback';
+import { WorkspaceGuide } from './guide';
 const WorkspaceContext = createContext<Workspace | null>(null);
 export function useWorkspace() {
   const w = useContext(WorkspaceContext);
@@ -107,7 +108,7 @@ export function DashboardShell({
             </select>
             <ChevronsUpDown size={12} />
           </div>
-          <div className="nav-label">Workspace</div>
+          <div className="nav-label">{t.overview}</div>
           <nav className="side-nav">
             {sections.map(([key, Icon], i) => (
               <Link
@@ -199,6 +200,7 @@ export function DashboardShell({
             </div>
           </header>
           <div className="app-content page-fade" key={section}>
+            <WorkspaceGuide />
             {children}
           </div>
         </main>

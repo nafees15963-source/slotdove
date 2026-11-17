@@ -1,8 +1,9 @@
 import 'server-only';
-import { PLAN_DEFAULTS, type PlanId } from './billing';
+import { BILLING_ENABLED, PLAN_DEFAULTS, type PlanId } from './billing';
 /** Public plan configuration; proposed defaults remain explicit during setup. */
 export async function getPlanPricing() {
   const result = structuredClone(PLAN_DEFAULTS);
+  if (!BILLING_ENABLED) return result;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return result;

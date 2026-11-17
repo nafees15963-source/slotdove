@@ -1,0 +1,134 @@
+/* Shared interaction and spacing system for public and workspace screens. */
+:root {
+  --bg: #f7f8fc;
+  --ink: #202338;
+  --purple: #7047d7;
+  --purple-dark: #5833b4;
+  --purple-soft: #eee8fc;
+  --radius: 20px;
+}
+.btn {
+  min-height: 44px;
+  padding: 11px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    background 0.16s,
+    box-shadow 0.16s,
+    transform 0.16s;
+}
+.btn:has(> svg:first-child) {
+  padding-left: 14px;
+}
+.btn-icon {
+  min-width: 44px;
+  padding: 10px;
+}
+.btn-lg {
+  min-height: 52px;
+  font-size: 16px;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: 4px;
+}
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.field input,
+.field select,
+.field textarea {
+  min-height: 46px;
+  font-size: 16px;
+  border-radius: 10px;
+}
+.field label {
+  font-size: 14px;
+}
+.nav-link {
+  min-height: 44px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+.nav-link.active {
+  box-shadow: inset 3px 0 var(--purple);
+}
+.topbar {
+  min-height: 76px;
+}
+.app-content {
+  max-width: 1560px;
+  margin: auto;
+}
+.workspace-guide {
+  margin-bottom: 28px;
+  border-radius: 16px;
+  background: var(--purple-soft);
+  padding: 16px 20px;
+}
+.workspace-guide summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 28px;
+}
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+.guide-grid a {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+.guide-grid svg {
+  color: var(--purple);
+}
+.guide-grid strong {
+  font-size: 15px;
+}
+.guide-grid p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+table {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .guide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .guide-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-actions {
+    gap: 12px;
+  }
+  .form-actions .btn {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

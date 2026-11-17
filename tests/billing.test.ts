@@ -2,7 +2,7 @@ import { it, expect } from 'vitest';
 import { billingProvider, canUseFeature, PLAN_DEFAULTS } from '../src/lib/billing';
 it('all scheduling accounts are independent of Stripe', () => {
   expect(billingProvider.enabled).toBe(false);
-  expect(PLAN_DEFAULTS.free.monthlyPriceCents).toBe(0);
+  expect(Object.values(PLAN_DEFAULTS).map(p => [p.monthlyPriceCents, p.currency])).toEqual([[500,'EUR'],[1500,'EUR'],[2500,'EUR']]);
 });
 it('checkout cannot pretend to charge while disabled', async () => {
   await expect(billingProvider.createCheckout('example', 'pro')).rejects.toThrow(

@@ -2,10 +2,11 @@
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { createContext, useContext, type ReactNode } from 'react';
-import { en, type Messages } from '@/lib/i18n/en';
+import { type Messages } from '@/lib/i18n/en';
+import { de } from '@/lib/i18n/de';
 export const LocaleContext = createContext<{ locale: 'de' | 'en'; t: Messages }>({
-  locale: 'en',
-  t: en,
+  locale: 'de',
+  t: de,
 });
 export function useI18n() {
   return useContext(LocaleContext);

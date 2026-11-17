@@ -1,6 +1,7 @@
 import '@fontsource-variable/inter';
 import type { Metadata } from 'next';
 import './globals.css';
+import './redesign.css';
 import { Providers } from '@/components/providers';
 import { getLocale, getMessages } from '@/lib/i18n/server';
 export const metadata: Metadata = {

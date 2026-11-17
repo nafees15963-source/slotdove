@@ -54,9 +54,9 @@ export const marketing = {
       'Proposed plans for our launch. Right now, access is assigned individually and no subscription payment is required.',
     plans: [
       [
-        'Free',
+        'Starter',
         'A thoughtful start for your business.',
-        '0',
+        '5',
         [
           'Online booking page',
           'Services & customer management',
@@ -69,7 +69,7 @@ export const marketing = {
         'More room for your everyday flow.',
         '15',
         [
-          'Everything in Free',
+          'Everything in Starter',
           'Team scheduling',
           'Booking analytics',
           'Email reminders when configured',
@@ -78,7 +78,7 @@ export const marketing = {
       [
         'Business',
         'Your whole business, in harmony.',
-        '39',
+        '25',
         [
           'Everything in Pro',
           'Multiple team roles',
@@ -189,9 +189,9 @@ export const marketing = {
       'Geplante Tarife zum Launch. Aktuell wird der Zugang individuell vergeben; eine Abonnementzahlung ist nicht nötig.',
     plans: [
       [
-        'Free',
+        'Starter',
         'Ein guter Anfang für dein Unternehmen.',
-        '0',
+        '5',
         [
           'Online-Buchungsseite',
           'Leistungen & Kundenverwaltung',
@@ -204,7 +204,7 @@ export const marketing = {
         'Mehr Raum für deinen Arbeitsalltag.',
         '15',
         [
-          'Alles aus Free',
+          'Alles aus Starter',
           'Teamplanung',
           'Buchungsauswertungen',
           'Erinnerungen nach E-Mail-Einrichtung',
@@ -213,7 +213,7 @@ export const marketing = {
       [
         'Business',
         'Dein ganzes Unternehmen im Einklang.',
-        '39',
+        '25',
         [
           'Alles aus Pro',
           'Verschiedene Teamrollen',

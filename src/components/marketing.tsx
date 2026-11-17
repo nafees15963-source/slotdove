@@ -384,15 +384,21 @@ export async function Landing() {
             {m.plans.map(([name, desc, , features], i) => (
               <div className={`panel pricing-card ${i === 1 ? 'featured' : ''}`} key={String(name)}>
                 <div className="spread">
-                  <h3>{String(name)}</h3>
-                  {i > 0 && <span className="badge badge-purple">Prelaunch</span>}
+                  <h3>{i === 0 ? 'Starter' : String(name)}</h3>
+                  {i === 1 && (
+                    <span className="badge badge-purple">
+                      {locale === 'de' ? 'Für dein Team' : 'For your team'}
+                    </span>
+                  )}
                 </div>
                 <div className="price">
                   {new Intl.NumberFormat(locale, {
                     style: 'currency',
-                    currency: prices[String(name).toLowerCase() as PlanId].currency,
+                    currency: prices[(['free', 'pro', 'business'] as PlanId[])[i]].currency,
                     maximumFractionDigits: 0,
-                  }).format(prices[String(name).toLowerCase() as PlanId].monthlyPriceCents / 100)}
+                  }).format(
+                    prices[(['free', 'pro', 'business'] as PlanId[])[i]].monthlyPriceCents / 100,
+                  )}
                   <small> / {locale === 'de' ? 'Monat' : 'month'}</small>
                 </div>
                 <p>{String(desc)}</p>
@@ -410,9 +416,7 @@ export async function Landing() {
                     <ArrowRight size={13} />
                   </Link>
                 </Button>
-                {i > 0 && (
-                  <p style={{ fontSize: 9, marginTop: 12, textAlign: 'center' }}>{m.soon}</p>
-                )}
+                {<p style={{ fontSize: 9, marginTop: 12, textAlign: 'center' }}>{m.soon}</p>}
               </div>
             ))}
           </div>

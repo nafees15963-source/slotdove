@@ -6,9 +6,9 @@ export const PLAN_DEFAULTS: Record<
   PlanId,
   { name: string; monthlyPriceCents: number; currency: string }
 > = {
-  free: { name: 'Free', monthlyPriceCents: 0, currency: 'USD' },
-  pro: { name: 'Pro', monthlyPriceCents: 1500, currency: 'USD' },
-  business: { name: 'Business', monthlyPriceCents: 3900, currency: 'USD' },
+  free: { name: 'Starter', monthlyPriceCents: 500, currency: 'EUR' },
+  pro: { name: 'Pro', monthlyPriceCents: 1500, currency: 'EUR' },
+  business: { name: 'Business', monthlyPriceCents: 2500, currency: 'EUR' },
 };
 export interface BillingProvider {
   readonly enabled: boolean;
