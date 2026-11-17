@@ -20,7 +20,7 @@ export function WorkspaceGuide() {
       path: 'staff',
       title: de ? '2. Zuständigkeit festlegen' : '2. Assign responsibility',
       text: de
-        ? 'Wähle, wer die Leistung anbietet. Ein Profil benötigt kein eigenes Benutzerkonto.'
+        ? 'Optional: Wähle, wer die Leistung anbietet. Du kannst Termine auch zuerst ohne Zuordnung anlegen.'
         : 'Choose who offers the service. A profile does not need a user account.',
     },
     {

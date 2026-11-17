@@ -101,6 +101,16 @@ try {
   const user = await connect();
   await user.query('set role authenticated');
   await user.query("select set_config('request.jwt.claim.sub',$1,false)", [u1]);
+  await test('owner can plan without staff and assign later with schedule validation', async () => {
+    const customer = (await user.query('select id from customers where business_id=$1', [b1])).rows[0].id;
+    const booking = (await user.query("insert into bookings(business_id,service_id,customer_id,starts_at) values($1,$2,$3,date_trunc('day',now())+interval '10 days 10 hours') returning id,staff_id", [b1,s,customer])).rows[0];
+    assert.equal(booking.staff_id, null);
+    await user.query('update bookings set staff_id=$1 where id=$2', [st,booking.id]);
+    assert.equal((await user.query('select staff_id from bookings where id=$1',[booking.id])).rows[0].staff_id,st);
+    await user.query("update bookings set status='cancelled' where id=$1",[booking.id]);
+    await assert.rejects(user.query('update bookings set staff_id=null where id=$1',[booking.id]));
+    await user.query('delete from bookings where id=$1',[booking.id]);
+  });
   await test('tenant isolation: owner A cannot read owner B customers', async () => {
     const r = await user.query('select * from customers where business_id=$1', [b2]);
     assert.equal(r.rowCount, 0);

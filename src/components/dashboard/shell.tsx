@@ -33,6 +33,7 @@ import type { Messages } from '@/lib/i18n/en';
 import { toast } from 'sonner';
 import { NavigationFeedback } from '../navigation-feedback';
 import { WorkspaceGuide } from './guide';
+import { PlanningAssistant } from './planning-assistant';
 const WorkspaceContext = createContext<Workspace | null>(null);
 export function useWorkspace() {
   const w = useContext(WorkspaceContext);
@@ -201,6 +202,7 @@ export function DashboardShell({
           </header>
           <div className="app-content page-fade" key={section}>
             <WorkspaceGuide />
+            {section === 'overview' && <PlanningAssistant />}
             {children}
           </div>
         </main>

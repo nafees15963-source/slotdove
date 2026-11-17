@@ -67,7 +67,8 @@ export function EntityForm({
     e.preventDefault();
     setBusy(true);
     setError('');
-    const raw = Object.fromEntries(new FormData(e.currentTarget));
+    const formData = new FormData(e.currentTarget);
+    const raw = Object.fromEntries(formData);
     let fields: Record<string, unknown> = { ...raw };
     try {
       if (initial) fields.id = initial.id;
@@ -79,11 +80,12 @@ export function EntityForm({
         };
       if (kind === 'staff') fields.active = raw.active === 'on';
       if (kind === 'invite' && !raw.staff_id) delete fields.staff_id;
-      if (kind === 'hours') fields.weekday = Number(raw.weekday);
+      if (kind === 'hours') fields.days = formData.getAll('weekday').map(Number);
       if (kind === 'booking')
         fields = {
           ...fields,
           starts_at: localTime(String(raw.datetime)),
+          staff_id: raw.staff_id || null,
           idempotency_key: crypto.randomUUID(),
           consent: true,
         };
@@ -98,7 +100,7 @@ export function EntityForm({
         customer: 'customers',
         staff: 'staff',
         booking: 'bookings',
-        hours: 'availability',
+        hours: 'week-plan',
         block: 'blocks',
         invite: 'invitations',
       }[kind];
@@ -140,7 +142,7 @@ export function EntityForm({
         required={required}
         min={min}
         max={max}
-        step={name === 'price' ? '0.01' : undefined}
+        step={name === 'price' ? '0.01' : name === 'datetime' ? w.business.slot_interval * 60 : undefined}
         maxLength={type === 'text' ? 100 : undefined}
       />
     </div>
@@ -283,7 +285,8 @@ export function EntityForm({
             {['booking', 'hours', 'block'].includes(kind) && (
               <div className="field">
                 <label htmlFor="staff">{t.employee}</label>
-                <select id="staff" name="staff_id" required>
+                <select id="staff" name="staff_id" required={kind !== 'booking'}>
+                  {kind === 'booking' && <option value="">{locale === 'de' ? 'Später zuweisen' : 'Assign later'}</option>}
                   {staff.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -304,7 +307,7 @@ export function EntityForm({
                 </div>
                 <p className="notice full">
                   {locale === 'de'
-                    ? 'Arbeitszeiten, Terminraster und Puffer werden beim Speichern geprüft.'
+                    ? `Wähle eine Uhrzeit im ${w.business.slot_interval}-Minuten-Raster, zum Beispiel volle Stunden. Ohne Mitarbeiter bleibt der Termin zur späteren Planung offen. Bei Zuweisung werden Arbeitszeiten und Puffer geprüft.`
                     : 'Working hours, slot interval, and buffers are validated when saving.'}
                 </p>
               </>
@@ -313,15 +316,16 @@ export function EntityForm({
               <>
                 <div className="field">
                   <label htmlFor="weekday">{t.weekday}</label>
-                  <select name="weekday" id="weekday">
+                  <div className="row wrap">
                     {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-                      <option key={d} value={d}>
+                      <label className="check-label" key={d}>
+                        <input type="checkbox" name="weekday" value={d} defaultChecked={d > 0 && d < 6} />
                         {new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(
                           new Date(2026, 10, 1 + d),
                         )}
-                      </option>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
                 {input('starts', t.from, 'time', '09:00')}
                 {input('ends', t.to, 'time', '17:00')}
@@ -345,7 +349,7 @@ export function EntityForm({
               {t.cancel}
             </Button>
             <Button
-              disabled={busy || (['booking', 'hours', 'block'].includes(kind) && !staff.length)}
+              disabled={busy || (['hours', 'block'].includes(kind) && !staff.length) || (kind === 'booking' && !selectedService)}
             >
               {busy ? <span className="spinner" /> : <Check size={15} />}{' '}
               {kind === 'booking' ? t.saveBooking : t.save}
@@ -427,6 +431,13 @@ export function BookingDetail({
               {t.save}
             </Button>
           </form>
+          {w.role !== 'staff' && ['pending', 'confirmed'].includes(booking.status) && <div className="field">
+            <label htmlFor="assign-booking">{t.employee}</label>
+            <select id="assign-booking" value={booking.staff_id || ''} disabled={busy} onChange={(e) => update({ staff_id: e.target.value || null })}>
+              <option value="">{locale === 'de' ? 'Noch nicht zugewiesen' : 'Unassigned'}</option>
+              {w.staff.filter((s) => s.active && w.assignments.some((a) => a.staff_id === s.id && a.service_id === booking.service_id)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>}
           <div className="row wrap">
             {w.role !== 'staff' &&
               ['cancelled', 'completed', 'no_show'].includes(booking.status) && (

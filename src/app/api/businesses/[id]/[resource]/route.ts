@@ -78,6 +78,13 @@ export async function POST(request: Request, context: Context) {
       if (error) throw error;
       return json(data);
     }
+    if (resource === 'week-plan') {
+      const days = z.array(z.number().int().min(0).max(6)).min(1).max(7).parse(input.days);
+      const rows = [...new Set(days)].map((weekday) => ({ ...hoursSchema.parse({ ...input, weekday }), business_id: id }));
+      const { error } = await db.from('availability_rules').insert(rows);
+      if (error) throw error;
+      return json({ ok: true });
+    }
     if (
       resource === 'services' ||
       resource === 'customers' ||
@@ -133,7 +140,7 @@ export async function POST(request: Request, context: Context) {
       return json({ ok: true });
     }
     if (resource === 'bookings') {
-      const fields = bookingSchema.parse({ ...input, business_id: id });
+      const fields = bookingSchema.extend({ staff_id: z.uuid().nullable() }).parse({ ...input, business_id: id });
       const { data: existing, error: findError } = await db
         .from('bookings')
         .select('id')
@@ -180,6 +187,7 @@ export async function POST(request: Request, context: Context) {
           status: statusSchema.optional(),
           starts_at: z.iso.datetime({ offset: true }).optional(),
           internal_notes: z.string().max(2000).optional(),
+          staff_id: z.uuid().nullable().optional(),
         })
         .parse(input);
       const { id: bookingId, ...patch } = fields;
