@@ -424,6 +424,19 @@ export function BookingDetail({
             <small>
               {w.business.timezone} · {w.staff.find((s) => s.id === booking.staff_id)?.name}
             </small>
+            {booking.booking_number && (
+              <button
+                type="button"
+                className="booking-number"
+                title={locale === 'de' ? 'Buchungsnummer kopieren' : 'Copy booking number'}
+                onClick={async () => {
+                  await navigator.clipboard.writeText(booking.booking_number);
+                  toast.success(t.copied);
+                }}
+              >
+                # {booking.booking_number}
+              </button>
+            )}
             {booking.notes && <p>{booking.notes}</p>}
           </div>
           <form

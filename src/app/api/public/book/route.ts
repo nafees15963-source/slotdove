@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { bookingSchema } from '@/lib/validation';
 import { body, failure, hashToken, json, rateLimit, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { logActivity } from '@/lib/activity';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -25,9 +26,16 @@ export async function POST(request: Request) {
       p_token_hash: hashToken(token),
     });
     if (error) throw error;
+    const { data: number } = await supabaseAdmin().from('bookings').select('booking_number').eq('id', (data as { id: string }).id).single();
+    void logActivity(request, {
+      business_id: input.business_id,
+      action: 'customer.booked',
+      details: { booking_number: number?.booking_number, customer: input.name, starts_at: input.starts_at },
+    });
     return json(
       {
         ...data,
+        booking_number: number?.booking_number,
         management_url: `${new URL(request.url).origin}/manage#token=${token}`,
         email_status:
           process.env.RESEND_API_KEY && process.env.EMAIL_FROM ? 'queued' : 'unavailable',

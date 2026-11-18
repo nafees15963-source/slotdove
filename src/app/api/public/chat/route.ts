@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { body, failure, hashToken, HttpError, json, rateLimit, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { postMessage } from '@/lib/chat';
+import { logActivity } from '@/lib/activity';
 /** Customer side of the appointment chat, authorized by the private booking link. */
 export async function POST(request: Request) {
   try {
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       conversation = data;
     }
     const message = await postMessage(db, conversation!, { kind: 'customer', id: null, name: booking.customer_name }, input.text);
+    void logActivity(request, { business_id: booking.business_id, action: 'customer.chat', details: { customer: booking.customer_name, flagged: message.flagged } });
     return json({ message: { id: message.id, sender_kind: message.sender_kind, sender_name: message.sender_name, body: message.body, created_at: message.created_at } });
   } catch (e) {
     return failure(e);

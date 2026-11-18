@@ -33,6 +33,7 @@ export function Schedule({ listOnly = false }: { listOnly?: boolean }) {
     [view, setView] = useState<'month' | 'week' | 'day' | 'list'>(listOnly ? 'list' : 'month'),
     [staff, setStaff] = useState(''),
     [status, setStatus] = useState(''),
+    [query, setQuery] = useState(''),
     [service, setService] = useState(''),
     [detail, setDetail] = useState<Booking | null>(null),
     [remote, setRemote] = useState<Booking[] | null>(null),
@@ -82,7 +83,8 @@ export function Schedule({ listOnly = false }: { listOnly?: boolean }) {
     (b) =>
       (!staff || b.staff_id === staff) &&
       (!status || b.status === status) &&
-      (!service || b.service_id === service),
+      (!service || b.service_id === service) &&
+      (!query || `${b.booking_number} ${b.customer_name}`.toLowerCase().includes(query.trim().toLowerCase())),
   );
   function navigate(direction: number) {
     setDate((d) =>
@@ -143,6 +145,13 @@ export function Schedule({ listOnly = false }: { listOnly?: boolean }) {
         )}
       </div>
       <div className="row wrap" style={{ marginBottom: 20 }} data-tour="filters">
+        <input
+          className="filter-search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={locale === 'de' ? 'Buchungsnr. oder Name' : 'Booking no. or name'}
+          aria-label={locale === 'de' ? 'Nach Buchungsnummer oder Name suchen' : 'Search booking number or name'}
+        />
         <select
           aria-label={t.employee}
           value={staff}

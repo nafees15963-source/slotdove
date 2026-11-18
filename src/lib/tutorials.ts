@@ -121,8 +121,17 @@ export const tutorials: Record<string, Tutorial> = {
     id: 'chat',
     title: t('Nachrichten', 'Messages'),
     steps: [
-      { visual: 'chat', title: t('Team, Kunden und Support', 'Team, customers and support'), text: t('Links wählst du den Chat: Team-Chat für Absprachen, Kunden-Chats zu Terminen und der direkte Draht zum Slotdove-Support.', 'Choose a chat on the left: team chat, customer chats per appointment and a direct line to Slotdove support.') },
+      { visual: 'chat', title: t('Team und Kunden', 'Team and customers'), text: t('Links wählst du den Chat: Team-Chat für Absprachen und Kunden-Chats zu Terminen. Kunden schreiben dir über ihren privaten Terminlink.', 'Choose a chat on the left: team chat and customer chats per appointment. Customers write via their private appointment link.') },
       { visual: 'report', title: t('Melden & Sicherheit', 'Report & safety'), text: t('Unangebrachte Nachrichten kannst du melden (⚑). Die KI markiert Beleidigungen und Betrugsversuche automatisch zur Prüfung.', 'Report inappropriate messages (⚑). The AI flags insults and scam attempts automatically for review.') },
+    ],
+  },
+  support: {
+    id: 'support',
+    title: t('Hilfe & Support', 'Help & support'),
+    steps: [
+      { visual: 'support', title: t('Anfrage mit Fallnummer', 'Requests with case numbers'), text: t('Klick auf „Neue Anfrage“, wähle das Thema und beschreibe kurz das Problem. Du bekommst sofort eine Fallnummer wie F-2026-00012.', 'Click “New request”, pick a topic and describe the problem. You instantly get a case number like F-2026-00012.') },
+      { visual: 'ai', title: t('Sofort-Hilfe', 'Instant help'), text: t('Schon beim Tippen schlägt die KI passende Antworten vor – oft ist das Problem damit direkt gelöst.', 'While you type, the AI suggests matching answers – often solving it right away.') },
+      { visual: 'chat', title: t('Antworten im Verlauf', 'Replies in the thread'), text: t('Das Slotdove-Team antwortet im Verlauf. „Antwort da“ zeigt, dass etwas Neues auf dich wartet.', 'The Slotdove team replies in the thread. “Answered” means something new is waiting for you.') },
     ],
   },
   admin: {
@@ -130,7 +139,8 @@ export const tutorials: Record<string, Tutorial> = {
     title: t('Plattformverwaltung', 'Platform admin'),
     steps: [
       { visual: 'stats', title: t('Alles im Blick', 'Everything at a glance'), text: t('Konten, Benutzer, Meldungen und Auffälligkeiten. Die KI sortiert verdächtige Aktivitäten nach Risiko.', 'Accounts, users, reports and anomalies. The AI ranks suspicious activity by risk.') },
-      { visual: 'support', title: t('Supportmodus', 'Support mode'), text: t('„Als Support öffnen“ lässt dich 2 Stunden lang das Konto eines Kunden bearbeiten. Jeder Zugriff wird protokolliert.', '“Open as support” lets you edit a customer account for 2 hours. Every access is logged.') },
+      { visual: 'support', title: t('Support-Panel & Fallnummern', 'Support panel & case numbers'), text: t('Alle Anfragen mit Fallnummer, Status und Priorität. Antworte, schreibe interne Notizen oder lass dir von der KI eine Antwort vorschlagen.', 'All requests with case number, status and priority. Reply, add internal notes or let the AI draft a reply.') },
+      { visual: 'calendar', title: t('Ansehen oder alles bearbeiten', 'View or edit everything'), text: t('Im Unternehmen siehst du Termine, Kunden, Chats und Aktivität sofort. „Alles bearbeiten“ öffnet das Konto 2 Stunden mit vollen Rechten – protokolliert.', 'In a business you see appointments, customers, chats and activity instantly. “Edit everything” opens the account for 2 hours with full rights – logged.') },
       { visual: 'ai', title: t('Beta-Funktionen verteilen', 'Roll out beta features'), text: t('Unter „Beta & Funktionen“ schaltest du neue Funktionen für einzelne Konten oder alle frei.', 'Under “Beta & features” enable new features for single accounts or everyone.') },
     ],
   },
@@ -148,6 +158,6 @@ export const faq: { q: [string, string]; a: [string, string]; href?: string }[] 
   { q: t('Erinnerung E-Mail Benachrichtigung SMS', 'Reminder email notification'), a: t('Erinnerungen 24 h und 2 h vorher stellst du unter „Benachrichtigungen“ ein.', 'Set reminders 24 h and 2 h before under “Notifications”.'), href: '/dashboard/notifications' },
   { q: t('Kunde löschen Daten DSGVO anonymisieren export', 'Delete customer GDPR anonymise export'), a: t('Kunde öffnen → „Exportieren“ oder „Anonymisieren“.', 'Open the customer → “Export” or “Anonymise”.'), href: '/dashboard/customers' },
   { q: t('Puffer Pause zwischen Terminen', 'Buffer break between appointments'), a: t('Puffer stellst du pro Leistung ein: Minuten vorher und nachher werden automatisch freigehalten.', 'Buffers are set per service: minutes before and after are kept free automatically.'), href: '/dashboard/services' },
-  { q: t('Support Hilfe Kontakt Problem Fehler', 'Support help contact problem bug'), a: t('Schreib uns im Bereich „Nachrichten“ → „Slotdove-Support“. Wir antworten dort direkt.', 'Message us in “Messages” → “Slotdove support”. We reply right there.'), href: '/dashboard/chat' },
+  { q: t('Support Hilfe Kontakt Problem Fehler', 'Support help contact problem bug'), a: t('Öffne „Hilfe & Support“ und starte eine neue Anfrage. Du bekommst eine Fallnummer, und das Slotdove-Team antwortet dort.', 'Open “Help & support” and start a new request. You get a case number and the Slotdove team replies there.'), href: '/dashboard/support' },
   { q: t('Chat melden Beleidigung Spam', 'Report chat insult spam'), a: t('Fahre über die Nachricht und klicke ⚑ „Melden“. Unser Team prüft das.', 'Hover the message and click ⚑ “Report”. Our team reviews it.'), href: '/dashboard/chat' },
 ];

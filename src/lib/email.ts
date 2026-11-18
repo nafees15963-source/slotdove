@@ -14,6 +14,7 @@ export function appointmentEmail(input: {
   timezone: string;
   status: string;
   address: string;
+  bookingNumber?: string;
 }) {
   const de = input.locale === 'de';
   const titles: Record<string, string> = de
@@ -35,7 +36,7 @@ export function appointmentEmail(input: {
   const safe = Object.fromEntries(Object.entries(input).map(([k, v]) => [k, escapeHtml(v)]));
   return {
     subject,
-    html: `<!doctype html><html lang="${de ? 'de' : 'en'}"><body style="margin:0;background:#f6f5fa;font-family:Arial,sans-serif;color:#282631"><div style="max-width:520px;margin:40px auto;padding:36px;background:#fff;border-radius:16px"><div style="font-size:24px;font-weight:bold;color:#7460db">slotdove.</div><h1 style="font-size:25px;line-height:1.3;margin-top:35px">${subject}</h1><p>${safe.business}</p><div style="padding:22px;background:#f4f1fc;border-radius:12px;margin:25px 0"><strong>${safe.service}</strong><p>${safe.date}<br><small>${safe.timezone}</small></p><p>${safe.address}</p></div><p style="font-size:12px;color:#777">${de ? 'Für Änderungen nutze den privaten Link auf deiner Buchungsbestätigung oder kontaktiere das Unternehmen.' : 'To make changes, use the private link on your booking confirmation page or contact the business.'}</p><p style="font-size:10px;color:#999;margin-top:30px">Your time. Beautifully booked.</p></div></body></html>`,
+    html: `<!doctype html><html lang="${de ? 'de' : 'en'}"><body style="margin:0;background:#f6f5fa;font-family:Arial,sans-serif;color:#282631"><div style="max-width:520px;margin:40px auto;padding:36px;background:#fff;border-radius:16px"><div style="font-size:24px;font-weight:bold;color:#7460db">slotdove.</div><h1 style="font-size:25px;line-height:1.3;margin-top:35px">${subject}</h1><p>${safe.business}</p><div style="padding:22px;background:#f4f1fc;border-radius:12px;margin:25px 0"><strong>${safe.service}</strong>${input.bookingNumber ? `<p style="font-family:monospace;font-size:15px;color:#6a46f5;margin:6px 0">${de ? 'Buchungsnummer' : 'Booking number'}: <b>${escapeHtml(input.bookingNumber)}</b></p>` : ''}<p>${safe.date}<br><small>${safe.timezone}</small></p><p>${safe.address}</p></div><p style="font-size:12px;color:#777">${de ? 'Für Änderungen nutze den privaten Link auf deiner Buchungsbestätigung oder kontaktiere das Unternehmen.' : 'To make changes, use the private link on your booking confirmation page or contact the business.'}</p><p style="font-size:10px;color:#999;margin-top:30px">Your time. Beautifully booked.</p></div></body></html>`,
   };
 }
 export async function sendEmail(input: {

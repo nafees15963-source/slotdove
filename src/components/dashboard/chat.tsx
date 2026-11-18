@@ -87,7 +87,7 @@ export function Chat() {
   const fmt = (iso: string) => new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }).format(new Date(iso));
   return (
     <>
-      <Heading title={de ? 'Nachrichten' : 'Messages'} description={de ? 'Team, Kunden und Support an einem Ort. Nachrichten werden automatisch auf Beleidigungen und Betrug geprüft.' : 'Team, customers and support in one place. Messages are screened for abuse and scams.'} />
+      <Heading title={de ? 'Nachrichten' : 'Messages'} description={de ? 'Team und Kunden an einem Ort. Nachrichten werden automatisch auf Beleidigungen und Betrug geprüft.' : 'Team, customers and support in one place. Messages are screened for abuse and scams.'} />
       {unavailable ? (
         <div className="notice">{de ? 'Der Chat ist gerade nicht erreichbar. Bitte versuche es später erneut.' : 'Chat is unavailable right now.'}</div>
       ) : (
@@ -108,7 +108,7 @@ export function Chat() {
               );
             })}
             {!conversations.length && <p className="muted" style={{ padding: 16 }}>{de ? 'Wird geladen …' : 'Loading …'}</p>}
-            <p className="chat-hint">{de ? 'Kundenchats startest du im Termin über „Nachricht senden“.' : 'Start customer chats from an appointment via “Send message”.'}</p>
+            <p className="chat-hint">{de ? 'Kundenchats startest du im Termin über „Nachricht senden“. Für Hilfe vom Slotdove-Team nutze „Hilfe & Support“.' : 'Start customer chats from an appointment via “Send message”. For help from Slotdove use “Help & support”.'}</p>
           </aside>
           <section className="chat-main">
             <header>

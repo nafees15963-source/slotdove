@@ -20,6 +20,7 @@ type Managed = {
   status: string;
   service_id: string;
   staff_id: string;
+  booking_number?: string;
 };
 export function PrivateLink({ invite = false }: { invite?: boolean }) {
   const { t, locale } = useI18n(),
@@ -119,6 +120,11 @@ export function PrivateLink({ invite = false }: { invite?: boolean }) {
           <>
             <span className="badge badge-purple">{booking.business_name}</span>
             <h2>{booking.service_name}</h2>
+            {booking.booking_number && (
+              <span className="booking-number">
+                {locale === 'de' ? 'Buchungsnummer' : 'Booking no.'} {booking.booking_number}
+              </span>
+            )}
             <div className="row">
               <Clock3 size={15} />
               {dateLabel(booking.starts_at, booking.timezone, locale)}

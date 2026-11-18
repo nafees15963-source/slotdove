@@ -13,8 +13,12 @@ export function Preferences() {
       <button
         className="btn btn-ghost btn-sm"
         onClick={() => {
-          document.cookie = `slotdove-locale=${locale === 'de' ? 'en' : 'de'};path=/;max-age=31536000;SameSite=Lax`;
-          if (['/', '/de', '/en'].includes(path)) router.push(locale === 'de' ? '/en' : '/de');
+          const next = locale === 'de' ? 'en' : 'de';
+          document.cookie = `slotdove-locale=${next};path=/;max-age=31536000;SameSite=Lax`;
+          // A full load is needed: the root layout (and its language context) is
+          // not re-rendered on client-side navigation.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload needed (see above)
+          if (['/', '/de', '/en'].includes(path)) window.location.assign(`/${next}`);
           else router.refresh();
         }}
         aria-label={locale === 'en' ? 'Switch to German' : 'Auf Englisch wechseln'}

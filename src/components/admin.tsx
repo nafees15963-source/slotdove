@@ -15,6 +15,8 @@ import {
   Flag,
   FlaskConical,
   LayoutDashboard,
+  LifeBuoy,
+  Wand2,
   LogOut,
   Megaphone,
   MessageCircle,
@@ -39,6 +41,7 @@ import { riskLabels } from '@/lib/ai/anomaly';
 import { reasonLabels } from '@/lib/ai/moderation';
 import { industries, industryById } from '@/lib/industries';
 import { TutorialProvider, useTutorial } from './tutorial';
+import { categories, priorities, statusLabel, type TicketStatus } from './dashboard/support';
 
 type AdminBusiness = {
   id: string;
@@ -80,8 +83,10 @@ type AdminData = {
   activity: ActivityRow[];
   risks: { user_id: string; score: number; reasons: string[] }[];
   support: { id: string; business_id: string; last_message_at: string }[];
+  tickets: AdminTicket[];
 };
-type Tab = 'overview' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
+type AdminTicket = { id: string; case_number: string; business_id: string | null; user_id: string | null; contact_email: string; subject: string; category: string; priority: string; status: TicketStatus; assigned_to: string | null; last_reply_by: string; created_at: string; updated_at: string };
+type Tab = 'overview' | 'support' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
 const bannedNow = (until: string | null | undefined) => !!until && Date.parse(until) > Date.now();
 const fmt = (iso: string | null | undefined, locale: string) =>
   iso ? new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso)) : '—';
@@ -96,6 +101,13 @@ const actionLabel = (a: string) =>
     'booking-status.create': 'Termin geändert',
     'chat.send': 'Nachricht gesendet',
     'chat.report': 'Nachricht gemeldet',
+    'customer.booked': 'Kunde hat online gebucht',
+    'customer.cancelled': 'Kunde hat storniert',
+    'customer.rescheduled': 'Kunde hat verschoben',
+    'customer.chat': 'Kunde hat geschrieben',
+    'support.ticket': 'Supportfall eröffnet',
+    'support.reply': 'Supportfall beantwortet',
+    'ai.ask': 'KI-Frage gestellt',
   })[a] || a;
 
 export function Admin() {
@@ -150,6 +162,7 @@ function AdminConsole() {
   const openReports = data?.reports.filter((r) => r.status === 'open') || [];
   const nav: [Tab, typeof LayoutDashboard, string, number?][] = [
     ['overview', LayoutDashboard, de ? 'Übersicht' : 'Overview'],
+    ['support', LifeBuoy, de ? 'Support-Panel' : 'Support desk', data?.tickets.filter((t) => !['resolved', 'closed'].includes(t.status) && t.last_reply_by === 'user').length || undefined],
     ['businesses', Building2, de ? 'Unternehmen' : 'Businesses', data?.businesses.length],
     ['users', Users, de ? 'Benutzer' : 'Users', data?.risks.filter((r) => r.score >= 0.5).length || undefined],
     ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined],
@@ -293,6 +306,7 @@ function AdminConsole() {
             )}
           </>
         )}
+        {data && tab === 'support' && <SupportPanel data={data} action={action} nameOf={nameOf} emailOf={emailOf} onBusiness={setBusiness} />}
         {data && tab === 'businesses' && <BusinessTable data={data} emailOf={emailOf} onOpen={setBusiness} />}
         {data && tab === 'users' && <UserTable data={data} onOpen={setUser} />}
         {data && tab === 'moderation' && <Moderation data={data} action={action} nameOf={nameOf} />}
@@ -503,9 +517,8 @@ function Moderation({ data, action, nameOf }: { data: AdminData; action: ActionF
   const { locale } = useI18n();
   const de = locale === 'de';
   const [filter, setFilter] = useState<'open' | 'all'>('open');
-  const [support, setSupport] = useState<string | null>(data.support[0]?.business_id || null);
   return (
-    <div className="admin-grid">
+    <div className="stack">
       <section className="panel">
         <div className="panel-head">
           <h2 className="panel-title">{de ? 'Meldungen' : 'Reports'}</h2>
@@ -518,21 +531,6 @@ function Moderation({ data, action, nameOf }: { data: AdminData; action: ActionF
           </div>
         </div>
         <ReportList reports={data.reports.filter((r) => filter === 'all' || r.status === 'open')} action={action} nameOf={nameOf} />
-      </section>
-      <section className="panel">
-        <div className="panel-head">
-          <h2 className="panel-title">{de ? 'Support-Postfach' : 'Support inbox'}</h2>
-          <select value={support || ''} onChange={(e) => setSupport(e.target.value)} style={{ maxWidth: 220 }}>
-            <option value="">{de ? 'Unternehmen wählen' : 'Choose business'}</option>
-            {data.businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-                {data.support.some((s) => s.business_id === b.id) ? ' 💬' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        {support ? <SupportThread businessId={support} conversationId={data.support.find((s) => s.business_id === support)?.id} action={action} /> : <p className="panel-body muted">{de ? 'Wähle ein Unternehmen.' : 'Choose a business.'}</p>}
       </section>
     </div>
   );
@@ -561,33 +559,6 @@ function ConversationView({ conversationId, action, compact }: { conversationId:
         </div>
       ))}
       {!messages.length && <p className="muted">—</p>}
-    </div>
-  );
-}
-function SupportThread({ businessId, conversationId, action }: { businessId: string; conversationId?: string; action: ActionFn }) {
-  const { locale } = useI18n();
-  const de = locale === 'de';
-  const [text, setText] = useState('');
-  const [key, setKey] = useState(0);
-  return (
-    <div className="panel-body stack">
-      {conversationId && <ConversationView key={key + conversationId} conversationId={conversationId} action={action} />}
-      <form
-        className="chat-input"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!text.trim()) return;
-          if (await action({ action: 'support-reply', business_id: businessId, text }, de ? 'Gesendet' : 'Sent')) {
-            setText('');
-            setKey((k) => k + 1);
-          }
-        }}
-      >
-        <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder={de ? 'Als Slotdove Support antworten …' : 'Reply as Slotdove support …'} />
-        <button className="btn btn-primary btn-icon" aria-label={de ? 'Senden' : 'Send'}>
-          <Send size={15} />
-        </button>
-      </form>
     </div>
   );
 }
@@ -735,13 +706,17 @@ type BusinessDetail = {
   bookingCount: number;
   staff: { id: string; name: string; active: boolean }[];
   services: { id: string; name: string; active: boolean; price_cents: number; duration_minutes: number }[];
+  bookings: { id: string; booking_number: string; starts_at: string; status: string; customer_name: string; service_name: string; staff_id: string | null; price_cents: number; notes: string; internal_notes: string }[];
+  customers: { id: string; name: string; email: string | null; phone: string; notes: string; created_at: string }[];
+  tickets: { id: string; case_number: string; subject: string; status: string; priority: string; updated_at: string }[];
 };
 function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: string; data: AdminData; onClose: () => void; action: ActionFn; emailOf: Map<string, string>; onUser: (id: string) => void }) {
   const { locale } = useI18n(),
     router = useRouter();
   const de = locale === 'de';
   const [detail, setDetail] = useState<BusinessDetail | null>(null);
-  const [tab, setTab] = useState<'edit' | 'features' | 'chats' | 'activity'>('edit');
+  const [tab, setTab] = useState<'edit' | 'bookings' | 'customers' | 'features' | 'chats' | 'activity'>('bookings');
+  const [q, setQ] = useState('');
   const [chat, setChat] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const load = useCallback(
@@ -791,7 +766,7 @@ function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: st
                   }
                 }}
               >
-                <UserCog size={15} /> {de ? 'Als Support öffnen & bearbeiten' : 'Open & edit as support'}
+                <UserCog size={15} /> {de ? 'Alles bearbeiten (Supportmodus)' : 'Edit everything (support mode)'}
               </Button>
               <Button variant="outline" onClick={() => run({ action: 'support', id, start: false }, de ? 'Supportmodus beendet' : 'Support ended')}>
                 {de ? 'Support beenden' : 'End support'}
@@ -823,10 +798,12 @@ function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: st
             <div className="tabs">
               {(
                 [
-                  ['edit', de ? 'Daten' : 'Details'],
-                  ['features', de ? 'Funktionen' : 'Features'],
+                  ['bookings', de ? 'Termine' : 'Appointments'],
+                  ['customers', de ? 'Kunden' : 'Customers'],
                   ['chats', de ? 'Chats' : 'Chats'],
                   ['activity', de ? 'Aktivität' : 'Activity'],
+                  ['edit', de ? 'Daten' : 'Details'],
+                  ['features', de ? 'Funktionen' : 'Features'],
                 ] as const
               ).map(([k, l]) => (
                 <button key={k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>
@@ -945,6 +922,78 @@ function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: st
                 </div>
               </>
             )}
+            {tab === 'bookings' && (
+              <div className="stack">
+                <div className="search">
+                  <Search size={15} />
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={de ? 'Buchungsnummer oder Name …' : 'Booking number or name …'} />
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{de ? 'Nr.' : 'No.'}</th>
+                        <th>{de ? 'Termin' : 'When'}</th>
+                        <th>{de ? 'Kunde / Leistung' : 'Customer / service'}</th>
+                        <th>Status</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.bookings
+                        .filter((x) => `${x.booking_number} ${x.customer_name} ${x.service_name}`.toLowerCase().includes(q.toLowerCase()))
+                        .map((x) => (
+                          <tr key={x.id}>
+                            <td>
+                              <code>{x.booking_number}</code>
+                            </td>
+                            <td>{fmt(x.starts_at, locale)}</td>
+                            <td>
+                              <strong>{x.customer_name}</strong>
+                              <small className="block muted">
+                                {x.service_name}
+                                {x.staff_id ? ` · ${detail.staff.find((st) => st.id === x.staff_id)?.name || ''}` : ''}
+                                {x.notes ? ` · „${x.notes}“` : ''}
+                              </small>
+                            </td>
+                            <td>
+                              <span className={`badge ${['confirmed', 'completed'].includes(x.status) ? 'badge-green' : ['cancelled', 'no_show'].includes(x.status) ? 'badge-red' : 'badge-amber'}`}>{x.status}</span>
+                            </td>
+                            <td>
+                              {['pending', 'confirmed'].includes(x.status) && (
+                                <button className="btn btn-ghost btn-sm danger-text" onClick={() => confirm(de ? `Termin ${x.booking_number} stornieren?` : `Cancel ${x.booking_number}?`) && run({ action: 'booking-status', id: x.id, status: 'cancelled' })}>
+                                  {de ? 'Stornieren' : 'Cancel'}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                {!detail.bookings.length && <p className="muted">{de ? 'Keine Termine.' : 'No appointments.'}</p>}
+              </div>
+            )}
+            {tab === 'customers' && (
+              <div className="stack">
+                <div className="search">
+                  <Search size={15} />
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={de ? 'Name, E-Mail, Telefon …' : 'Name, email, phone …'} />
+                </div>
+                {detail.customers
+                  .filter((c) => `${c.name} ${c.email || ''} ${c.phone}`.toLowerCase().includes(q.toLowerCase()))
+                  .map((c) => (
+                    <div key={c.id} className="mini-msg">
+                      <strong>{c.name}</strong> <small className="muted">{[c.email, c.phone].filter(Boolean).join(' · ')}</small>
+                      <small className="block muted">
+                        {detail.bookings.filter((x) => x.customer_name === c.name).length} {de ? 'Termine' : 'appointments'} · {de ? 'seit' : 'since'} {fmt(c.created_at, locale)}
+                        {c.notes ? ` · ${c.notes}` : ''}
+                      </small>
+                    </div>
+                  ))}
+                {!detail.customers.length && <p className="muted">{de ? 'Keine Kunden.' : 'No customers.'}</p>}
+              </div>
+            )}
             {tab === 'features' && (
               <div className="stack">
                 {data.flags.map((f) => {
@@ -1000,6 +1049,8 @@ function ActivityFeed({ rows, emailOf, nameOf }: { rows: ActivityRow[]; emailOf?
           <span className="grow">
             {emailOf && a.user_id && <strong>{emailOf.get(a.user_id)} </strong>}
             {actionLabel(a.action)}
+            {typeof a.details?.customer === 'string' && <strong> · {a.details.customer}</strong>}
+            {typeof a.details?.booking_number === 'string' && <code> {a.details.booking_number}</code>}
             {nameOf && a.business_id && <small> · {nameOf.get(a.business_id)}</small>}
             {a.user_agent && <small className="block muted">{a.user_agent.slice(0, 80)}</small>}
           </span>
@@ -1175,5 +1226,307 @@ function CreateBusiness({ open, onClose, action }: { open: boolean; onClose: () 
         </div>
       </form>
     </Dialog>
+  );
+}
+
+const templates = (de: boolean) =>
+  de
+    ? [
+        ['Danke', 'Hallo! Danke für deine Nachricht. Wir schauen uns das sofort an und melden uns hier, sobald wir mehr wissen.'],
+        ['Mehr Infos', 'Danke! Damit wir dir schnell helfen können: Auf welcher Seite passiert das genau, und gibt es eine Buchungsnummer (SD-…)? Ein Screenshot hilft auch.'],
+        ['Gelöst', 'Wir haben das Problem behoben. Bitte prüfe kurz, ob jetzt alles funktioniert. Wenn ja, kannst du den Fall schließen – sonst antworte einfach hier.'],
+        ['Selbst erledigt', 'Ich habe die Änderung direkt in deinem Konto vorgenommen (Supportmodus). Schau gern einmal drüber, ob alles so passt.'],
+      ]
+    : [
+        ['Thanks', 'Hi! Thanks for your message. We are looking into it and will update you here.'],
+        ['More info', 'Thanks! Which page does this happen on, and is there a booking number (SD-…)? A screenshot helps too.'],
+        ['Solved', 'We fixed the issue. Please check that everything works now. If so, you can close the case.'],
+        ['Done for you', 'I made the change directly in your account (support mode). Please have a look.'],
+      ];
+function SupportPanel({ data, action, nameOf, emailOf, onBusiness }: { data: AdminData; action: ActionFn; nameOf: Map<string, string>; emailOf: Map<string, string>; onBusiness: (id: string) => void }) {
+  const { locale } = useI18n();
+  const de = locale === 'de';
+  const [filter, setFilter] = useState<'todo' | 'waiting' | 'done' | 'all'>('todo');
+  const [q, setQ] = useState('');
+  const [selected, setSelected] = useState<string | null>(null);
+  const [create, setCreate] = useState(false);
+  const rank = { urgent: 0, high: 1, normal: 2, low: 3 } as Record<string, number>;
+  const list = data.tickets
+    .filter((t) =>
+      filter === 'todo'
+        ? ['open', 'in_progress'].includes(t.status)
+        : filter === 'waiting'
+          ? t.status === 'waiting'
+          : filter === 'done'
+            ? ['resolved', 'closed'].includes(t.status)
+            : true,
+    )
+    .filter((t) => `${t.case_number} ${t.subject} ${t.contact_email} ${t.business_id ? nameOf.get(t.business_id) : ''}`.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => (filter === 'todo' ? rank[a.priority] - rank[b.priority] || a.updated_at.localeCompare(b.updated_at) : b.updated_at.localeCompare(a.updated_at)));
+  const count = (f: typeof filter) => data.tickets.filter((t) => (f === 'todo' ? ['open', 'in_progress'].includes(t.status) : f === 'waiting' ? t.status === 'waiting' : ['resolved', 'closed'].includes(t.status))).length;
+  return (
+    <div className="support-admin">
+      <section className="panel support-queue">
+        <div className="panel-head wrap">
+          <div className="tabs">
+            {(
+              [
+                ['todo', de ? 'Zu erledigen' : 'To do'],
+                ['waiting', de ? 'Wartet auf Kunde' : 'Waiting'],
+                ['done', de ? 'Erledigt' : 'Done'],
+                ['all', de ? 'Alle' : 'All'],
+              ] as const
+            ).map(([k, l]) => (
+              <button key={k} className={`tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>
+                {l} {k !== 'all' && <span className="tab-count">{count(k)}</span>}
+              </button>
+            ))}
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setCreate(true)}>
+            <Plus size={13} /> {de ? 'Fall anlegen' : 'New case'}
+          </Button>
+        </div>
+        <div className="panel-body" style={{ paddingBottom: 8 }}>
+          <div className="search">
+            <Search size={15} />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={de ? 'Fallnummer, Betreff, Firma, E-Mail …' : 'Case no., subject, business, email …'} />
+          </div>
+        </div>
+        <div className="ticket-list">
+          {list.map((t) => (
+            <button key={t.id} className={`ticket-row ${selected === t.id ? 'on' : ''} prio-${t.priority}`} onClick={() => setSelected(t.id)}>
+              <div className="spread">
+                <code>{t.case_number}</code>
+                <span className={`badge ${statusLabel[t.status][2]}`}>{statusLabel[t.status][de ? 0 : 1]}</span>
+              </div>
+              <strong>
+                {categories[t.category]?.[2]} {t.subject}
+              </strong>
+              <small className="muted">
+                {t.business_id ? nameOf.get(t.business_id) : t.contact_email} · {priorities[t.priority][de ? 0 : 1]} · {fmt(t.updated_at, locale)}
+                {t.last_reply_by === 'user' && !['resolved', 'closed'].includes(t.status) && <b className="new-dot"> ● {de ? 'neu' : 'new'}</b>}
+              </small>
+            </button>
+          ))}
+          {!list.length && <p className="panel-body muted">{de ? 'Keine Fälle. 🎉' : 'No cases. 🎉'}</p>}
+        </div>
+      </section>
+      <section className="panel support-case">
+        {selected ? (
+          <AdminTicketView key={selected} id={selected} action={action} emailOf={emailOf} onBusiness={onBusiness} />
+        ) : (
+          <div className="panel-body empty-cta">
+            <LifeBuoy size={30} />
+            <p className="muted">{de ? 'Wähle links einen Fall.' : 'Pick a case on the left.'}</p>
+          </div>
+        )}
+      </section>
+      <Dialog open={create} onOpenChange={setCreate} title={de ? 'Fall für ein Unternehmen anlegen' : 'Open a case for a business'}>
+        <form
+          className="stack"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = Object.fromEntries(new FormData(e.currentTarget));
+            const r = await action({ action: 'ticket-create', business_id: f.business_id, subject: f.subject, text: f.text, priority: f.priority }, de ? 'Fall angelegt' : 'Case created');
+            if (r) setCreate(false);
+          }}
+        >
+          <div className="field">
+            <label htmlFor="tc-b">{de ? 'Unternehmen' : 'Business'}</label>
+            <select id="tc-b" name="business_id" required>
+              {data.businesses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="tc-s">{de ? 'Betreff' : 'Subject'}</label>
+            <input id="tc-s" name="subject" required minLength={3} maxLength={160} />
+          </div>
+          <div className="field">
+            <label htmlFor="tc-t">{de ? 'Nachricht an den Kunden' : 'Message to the customer'}</label>
+            <textarea id="tc-t" name="text" required rows={5} />
+          </div>
+          <div className="field">
+            <label htmlFor="tc-p">{de ? 'Priorität' : 'Priority'}</label>
+            <select id="tc-p" name="priority" defaultValue="normal">
+              {Object.entries(priorities).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v[de ? 0 : 1]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-actions">
+            <Button>{de ? 'Anlegen' : 'Create'}</Button>
+          </div>
+        </form>
+      </Dialog>
+    </div>
+  );
+}
+type TicketDetail = {
+  ticket: AdminTicket & { businesses: { id: string; name: string; slug: string; email: string } | null };
+  messages: { id: string; author_kind: string; author_name: string; body: string; internal: boolean; created_at: string }[];
+  ai: boolean;
+};
+function AdminTicketView({ id, action, emailOf, onBusiness }: { id: string; action: ActionFn; emailOf: Map<string, string>; onBusiness: (id: string) => void }) {
+  const { locale } = useI18n(),
+    router = useRouter();
+  const de = locale === 'de';
+  const [d, setD] = useState<TicketDetail | null>(null);
+  const [text, setText] = useState('');
+  const [internal, setInternal] = useState(false);
+  const [thinking, setThinking] = useState(false);
+  const load = useCallback(() => api<TicketDetail>(`/api/admin?ticket=${id}`).then(setD).catch((e) => toast.error(friendlyError(e, locale))), [id, locale]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (!d) return <div className="panel-body muted">…</div>;
+  const t = d.ticket;
+  const run = async (p: Record<string, unknown>, msg?: string) => {
+    const r = await action(p, msg);
+    await load();
+    return r;
+  };
+  return (
+    <div className="ticket-thread">
+      <header>
+        <div className="grow">
+          <div className="row wrap">
+            <code className="case-no">{t.case_number}</code>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={async () => {
+                await navigator.clipboard.writeText(t.case_number);
+                toast.success(de ? 'Fallnummer kopiert' : 'Copied');
+              }}
+            >
+              <Copy size={12} />
+            </button>
+          </div>
+          <h3>{t.subject}</h3>
+          <small className="muted">
+            {t.businesses ? (
+              <button className="link" onClick={() => onBusiness(t.businesses!.id)}>
+                {t.businesses.name}
+              </button>
+            ) : null}{' '}
+            · {t.user_id ? emailOf.get(t.user_id) : t.contact_email} · {de ? 'seit' : 'since'} {fmt(t.created_at, locale)}
+          </small>
+        </div>
+      </header>
+      <div className="ticket-controls">
+        <label className="inline-field">
+          Status
+          <select value={t.status} onChange={(e) => run({ action: 'ticket-update', id, status: e.target.value })}>
+            {Object.entries(statusLabel).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v[de ? 0 : 1]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="inline-field">
+          {de ? 'Priorität' : 'Priority'}
+          <select value={t.priority} onChange={(e) => run({ action: 'ticket-update', id, priority: e.target.value })}>
+            {Object.entries(priorities).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v[de ? 0 : 1]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="inline-field">
+          {de ? 'Thema' : 'Topic'}
+          <select value={t.category} onChange={(e) => run({ action: 'ticket-update', id, category: e.target.value })}>
+            {Object.entries(categories).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v[2]} {v[de ? 0 : 1]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {t.businesses && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              if (await action({ action: 'support', id: t.businesses!.id, start: true }, de ? 'Supportmodus aktiv' : 'Support mode active')) {
+                document.cookie = `slotdove-business=${t.businesses!.id};path=/;SameSite=Lax`;
+                router.push('/dashboard');
+              }
+            }}
+          >
+            <UserCog size={13} /> {de ? 'Im Konto bearbeiten' : 'Edit in account'}
+          </Button>
+        )}
+      </div>
+      <div className="chat-messages">
+        {d.messages.map((m) =>
+          m.author_kind === 'system' && !m.body.startsWith('Automatischer') ? (
+            <div key={m.id} className="system-line">
+              {m.body} · {fmt(m.created_at, locale)}
+            </div>
+          ) : (
+            <div key={m.id} className={`bubble-row ${m.author_kind === 'admin' ? 'own' : ''} ${m.internal ? 'internal' : ''}`}>
+              <div className="bubble">
+                <div className="bubble-meta">
+                  <strong>
+                    {m.internal ? '🔒 ' : ''}
+                    {m.author_name}
+                  </strong>
+                  <time>{fmt(m.created_at, locale)}</time>
+                </div>
+                <p>{m.body}</p>
+              </div>
+            </div>
+          ),
+        )}
+      </div>
+      <div className="reply-tools">
+        <div className="row wrap">
+          {templates(de).map(([label, body]) => (
+            <button key={label} className="chip" onClick={() => setText(body)}>
+              {label}
+            </button>
+          ))}
+          {d.ai && (
+            <button
+              className="chip ai-chip"
+              disabled={thinking}
+              onClick={async () => {
+                setThinking(true);
+                const r = await action({ action: 'ticket-suggest', id }, de ? 'Vorschlag erstellt' : 'Suggestion ready');
+                if (r?.suggestion) setText(String(r.suggestion));
+                setThinking(false);
+              }}
+            >
+              {thinking ? <span className="spinner" /> : <Wand2 size={13} />} {de ? 'KI-Antwortvorschlag' : 'AI draft'}
+            </button>
+          )}
+        </div>
+        <form
+          className="chat-input"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!text.trim()) return;
+            if (await run({ action: 'ticket-reply', id, text, internal }, internal ? (de ? 'Notiz gespeichert' : 'Note saved') : de ? 'Antwort gesendet' : 'Reply sent')) setText('');
+          }}
+        >
+          <textarea rows={3} className={internal ? 'internal' : ''} value={text} onChange={(e) => setText(e.target.value)} placeholder={internal ? (de ? 'Interne Notiz – sieht nur das Admin-Team' : 'Internal note – admins only') : de ? 'Antwort an den Kunden …' : 'Reply to customer …'} />
+          <div className="stack" style={{ gap: 6 }}>
+            <label className="check-label" style={{ fontSize: 12 }}>
+              <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} /> {de ? 'Intern' : 'Internal'}
+            </label>
+            <button className="btn btn-primary btn-icon" disabled={!text.trim()} aria-label={de ? 'Senden' : 'Send'}>
+              <Send size={15} />
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

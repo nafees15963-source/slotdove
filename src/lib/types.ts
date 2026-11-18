@@ -56,6 +56,7 @@ export type Customer = {
 };
 export type Booking = {
   id: string;
+  booking_number: string;
   business_id: string;
   staff_id: string | null;
   service_id: string;

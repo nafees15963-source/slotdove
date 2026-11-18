@@ -31,14 +31,13 @@ export async function GET(request: Request) {
       });
     }
     await ensureConversation(admin, businessId, 'team');
-    if (role !== 'staff') await ensureConversation(admin, businessId, 'support');
     let query = admin
       .from('conversations')
       .select('id,kind,booking_id,customer_name,last_message_at')
       .eq('business_id', businessId)
       .order('last_message_at', { ascending: false })
       .limit(100);
-    if (role === 'staff') query = query.eq('kind', 'team');
+    query = role === 'staff' ? query.eq('kind', 'team') : query.neq('kind', 'support');
     const { data, error } = await query;
     if (error) throw error;
     return json({ conversations: data });

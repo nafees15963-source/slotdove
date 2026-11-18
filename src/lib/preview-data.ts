@@ -40,6 +40,7 @@ const s1 = '00000000-0000-4000-8000-000000000101',
   st2 = '00000000-0000-4000-8000-000000000202';
 const booking = (i: number, d: number, h: number, sid: string, staff: string | null, name: string, status: Workspace['bookings'][0]['status'] = 'confirmed') => ({
   id: `00000000-0000-4000-8000-0000000003${String(i).padStart(2, '0')}`,
+  booking_number: `SD-7K3F${i}Q`,
   business_id: b,
   staff_id: staff,
   service_id: sid,

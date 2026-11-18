@@ -152,6 +152,20 @@ try {
     assert.equal((await db.query("select * from admin_audit_logs where action like 'support.%' and business_id=$1", [b1])).rowCount, 2);
     await assert.rejects(user.query('select admin_support_session($1,$2,true)', [u1, b1]));
   });
+  await test('every booking gets a unique readable booking number', async () => {
+    const customer = (await user.query('select id from customers where business_id=$1 limit 1', [b1])).rows[0].id;
+    const r = (await user.query("insert into bookings(business_id,service_id,customer_id,starts_at) values($1,$2,$3,date_trunc('day',now())+interval '20 days 9 hours') returning id,booking_number", [b1, s, customer])).rows[0];
+    assert.match(r.booking_number, /^SD-[2-9A-HJKMNP-Z]{6}$/);
+    await user.query("update bookings set status='cancelled' where id=$1", [r.id]);
+    await user.query('delete from bookings where id=$1', [r.id]);
+  });
+  await test('support tickets get sequential case numbers and stay server-only', async () => {
+    const a = (await db.query("insert into support_tickets(business_id,user_id,subject) values($1,$2,'Hilfe bitte') returning case_number", [b1, u1])).rows[0].case_number;
+    const b = (await db.query("insert into support_tickets(business_id,user_id,subject) values($1,$2,'Noch eine Frage') returning case_number", [b1, u1])).rows[0].case_number;
+    assert.match(a, /^F-\d{4}-\d{5}$/);
+    assert.ok(b > a);
+    await assert.rejects(user.query('select * from support_tickets'), /permission denied/);
+  });
   await test('tenant isolation: owner A cannot read owner B customers', async () => {
     const r = await user.query('select * from customers where business_id=$1', [b2]);
     assert.equal(r.rowCount, 0);

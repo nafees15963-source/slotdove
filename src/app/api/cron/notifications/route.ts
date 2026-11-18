@@ -61,6 +61,7 @@ export async function GET(request: Request) {
         timezone: booking.businesses.timezone,
         status: booking.status,
         address: booking.businesses.address,
+        bookingNumber: booking.booking_number,
       });
       const result = await sendEmail({
         ...email,

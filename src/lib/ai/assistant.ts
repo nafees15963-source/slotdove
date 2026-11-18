@@ -130,6 +130,6 @@ export function answer(question: string, w: Workspace, locale: 'de' | 'en'): Ass
   };
 }
 export const assistantExamples = {
-  de: ['Was steht heute an?', 'Wann ist morgen frei?', 'Umsatz diesen Monat', 'Was ist noch offen?', 'Wie trage ich Feiertage ein?', 'Tipps für mein Geschäft'],
-  en: ['What’s on today?', 'When is tomorrow free?', 'Revenue this month', 'What is still open?', 'How do I add holidays?', 'Tips for my business'],
+  de: ['Was steht heute an?', 'Wann ist morgen Nachmittag frei?', 'Wie lief der letzte Monat im Vergleich?', 'Welche Stammkunden waren lange nicht da?', 'Was kann ich verbessern?', 'Wie trage ich Feiertage ein?'],
+  en: ['What’s on today?', 'When is tomorrow afternoon free?', 'How did last month compare?', 'Which regulars haven’t been back?', 'What can I improve?', 'How do I add holidays?'],
 };

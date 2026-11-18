@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { body, failure, hashToken, json, rateLimit, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { logActivity } from '@/lib/activity';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -18,7 +19,15 @@ export async function POST(request: Request) {
       p_start: starts_at || null,
     });
     if (error) throw error;
-    return json(data);
+    const result = data as { id: string; business_id: string };
+    const { data: number } = await supabaseAdmin().from('bookings').select('booking_number,customer_name').eq('id', result.id).single();
+    if (action !== 'view')
+      void logActivity(request, {
+        business_id: result.business_id,
+        action: action === 'cancel' ? 'customer.cancelled' : 'customer.rescheduled',
+        details: { booking_number: number?.booking_number, customer: number?.customer_name, starts_at },
+      });
+    return json({ ...result, booking_number: number?.booking_number });
   } catch (e) {
     return failure(e);
   }

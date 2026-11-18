@@ -1,6 +1,7 @@
 'use client';
 import { useWorkspace, staffSections } from './shell';
 import { Chat } from './chat';
+import { SupportDesk } from './support';
 import { useI18n } from '../providers';
 import { Overview } from './overview';
 import { Schedule } from './schedule';
@@ -23,6 +24,8 @@ export function PageContent({ section }: { section: string }) {
       return <Entities kind={section} key={`${section}:${w.business.id}`} />;
     case 'chat':
       return <Chat />;
+    case 'support':
+      return <SupportDesk />;
     case 'availability':
       return <Availability />;
     case 'booking':

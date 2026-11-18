@@ -107,6 +107,7 @@ export function BookingTable({
               </td>
               <td>
                 {b.service_name}
+                {b.booking_number && <code className="num"> {b.booking_number}</code>}
                 <br />
                 <small>{w.staff.find((s) => s.id === b.staff_id)?.name}</small>
               </td>

@@ -66,6 +66,7 @@ const labels: Record<string, [string, string]> = {
   integrations: ['Website & Kalender', 'Website & calendar'],
   settings: ['Einstellungen', 'Settings'],
   billing: ['Tarif', 'Plan'],
+  support: ['Hilfe & Support', 'Help & support'],
 };
 export const sections = [
   ['overview', Sun],
@@ -82,13 +83,14 @@ export const sections = [
   ['integrations', Plug],
   ['settings', Settings2],
   ['billing', CreditCard],
+  ['support', LifeBuoy],
 ] as const;
 const groups: { title: [string, string]; keys: string[] }[] = [
   { title: ['Täglich', 'Daily'], keys: ['overview', 'calendar', 'appointments', 'customers', 'chat'] },
   { title: ['Einrichten', 'Set up'], keys: ['services', 'staff', 'availability', 'booking'] },
-  { title: ['Mehr', 'More'], keys: ['analytics', 'notifications', 'integrations', 'settings', 'billing'] },
+  { title: ['Mehr', 'More'], keys: ['analytics', 'notifications', 'integrations', 'settings', 'billing', 'support'] },
 ];
-export const staffSections = ['overview', 'calendar', 'appointments', 'chat'];
+export const staffSections = ['overview', 'calendar', 'appointments', 'chat', 'support'];
 export function sectionLabel(key: string, locale: string) {
   return (labels[key] || labels.overview)[locale === 'de' ? 0 : 1];
 }

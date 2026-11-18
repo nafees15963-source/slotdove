@@ -14,6 +14,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { scoreUsers } from '@/lib/ai/anomaly';
 import { ensureConversation, postMessage } from '@/lib/chat';
 import { logActivity } from '@/lib/activity';
+import { aiConfigured, groqChat } from '@/lib/groq';
 const plan = z.enum(['free', 'pro', 'business']);
 export async function GET(request: Request) {
   try {
@@ -22,7 +23,17 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const userId = url.searchParams.get('user'),
       businessId = url.searchParams.get('business'),
-      conversationId = url.searchParams.get('conversation');
+      conversationId = url.searchParams.get('conversation'),
+      ticketId = url.searchParams.get('ticket');
+    if (ticketId) {
+      const id = z.uuid().parse(ticketId);
+      const [{ data: ticket, error }, { data: messages }] = await Promise.all([
+        db.from('support_tickets').select('*,businesses(id,name,slug,email)').eq('id', id).single(),
+        db.from('support_ticket_messages').select('*').eq('ticket_id', id).order('created_at'),
+      ]);
+      if (error) throw error;
+      return json({ ticket, messages: messages || [], ai: aiConfigured() });
+    }
     if (userId) {
       const id = z.uuid().parse(userId);
       const [{ data: account, error }, activity, owned, memberships, messages] = await Promise.all([
@@ -52,7 +63,7 @@ export async function GET(request: Request) {
     }
     if (businessId) {
       const id = z.uuid().parse(businessId);
-      const [business, members, notes, features, activity, conversations, counts, staff, services] = await Promise.all([
+      const [business, members, notes, features, activity, conversations, counts, staff, services, bookings, customers, tickets] = await Promise.all([
         db.from('businesses').select('*,business_entitlements(plan_id)').eq('id', id).single(),
         db.from('business_members').select('user_id,role,created_at').eq('business_id', id),
         db.from('admin_business_notes').select('notes,updated_at').eq('business_id', id).maybeSingle(),
@@ -62,6 +73,14 @@ export async function GET(request: Request) {
         db.from('bookings').select('id', { count: 'exact', head: true }).eq('business_id', id),
         db.from('staff_profiles').select('id,name,active').eq('business_id', id),
         db.from('services').select('id,name,active,price_cents,duration_minutes').eq('business_id', id),
+        db
+          .from('bookings')
+          .select('id,booking_number,starts_at,status,customer_name,service_name,staff_id,price_cents,notes,internal_notes,created_at')
+          .eq('business_id', id)
+          .order('starts_at', { ascending: false })
+          .limit(300),
+        db.from('customers').select('id,name,email,phone,notes,created_at').eq('business_id', id).order('created_at', { ascending: false }).limit(300),
+        db.from('support_tickets').select('id,case_number,subject,status,priority,updated_at').eq('business_id', id).order('updated_at', { ascending: false }).limit(50),
       ]);
       if (business.error) throw business.error;
       return json({
@@ -74,6 +93,9 @@ export async function GET(request: Request) {
         bookingCount: counts.count || 0,
         staff: staff.data || [],
         services: services.data || [],
+        bookings: bookings.data || [],
+        customers: customers.data || [],
+        tickets: tickets.data || [],
       });
     }
     if (conversationId) {
@@ -88,7 +110,7 @@ export async function GET(request: Request) {
       return json({ messages: data });
     }
     const since = new Date(Date.now() - 14 * 86400000).toISOString();
-    const [businesses, stats, audit, accounts, notifications, reports, flags, overrides, announcements, activity, flaggedMessages, support, messageCount] = await Promise.all([
+    const [businesses, stats, audit, accounts, notifications, reports, flags, overrides, announcements, activity, flaggedMessages, support, messageCount, tickets] = await Promise.all([
       db
         .from('businesses')
         .select('id,name,slug,email,owner_id,industry,status,is_demo,demo_expires_at,created_at,published,business_entitlements(plan_id)')
@@ -115,6 +137,11 @@ export async function GET(request: Request) {
       db.from('messages').select('sender_id').eq('flagged', true).gte('created_at', since).limit(1000),
       db.from('conversations').select('id,business_id,last_message_at').eq('kind', 'support').order('last_message_at', { ascending: false }).limit(100),
       db.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', since),
+      db
+        .from('support_tickets')
+        .select('id,case_number,business_id,user_id,contact_email,subject,category,priority,status,assigned_to,last_reply_by,created_at,updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(500),
     ]);
     if (businesses.error || stats.error || audit.error || accounts.error || notifications.error)
       throw businesses.error || stats.error || audit.error || accounts.error || notifications.error;
@@ -149,6 +176,7 @@ export async function GET(request: Request) {
       activity: rows.slice(0, 200),
       risks: scoreUsers(rows, users, flaggedBy),
       support: support.data || [],
+      tickets: tickets.data || [],
     });
   } catch (e) {
     return failure(e);
@@ -315,6 +343,80 @@ export async function POST(request: Request) {
         const v = z.object({ business_id: z.uuid(), text: z.string().trim().min(1).max(4000) }).parse(input);
         const conversation = await ensureConversation(db, v.business_id, 'support');
         result = { message: await postMessage(db, conversation, { kind: 'admin', id: user.id, name: 'Slotdove Support' }, v.text) };
+        break;
+      }
+      case 'booking-status': {
+        const v = z.object({ id: z.uuid(), status: z.enum(['confirmed', 'cancelled', 'completed', 'no_show']) }).parse(input);
+        const { data, error } = await db.from('bookings').update({ status: v.status }).eq('id', v.id).select('business_id,booking_number').single();
+        if (error) throw error;
+        await audit('booking.status', data.business_id, { booking_number: data.booking_number, status: v.status });
+        break;
+      }
+      case 'ticket-reply': {
+        const v = z.object({ id: z.uuid(), text: z.string().trim().min(1).max(8000), internal: z.boolean().default(false), status: z.enum(['open', 'in_progress', 'waiting', 'resolved', 'closed']).optional() }).parse(input);
+        const { error } = await db.from('support_ticket_messages').insert({ ticket_id: v.id, author_kind: 'admin', author_id: user.id, author_name: 'Slotdove Support', body: v.text, internal: v.internal });
+        if (error) throw error;
+        const now = new Date().toISOString();
+        const status = v.status || (v.internal ? undefined : 'waiting');
+        await db
+          .from('support_tickets')
+          .update({ updated_at: now, ...(v.internal ? {} : { last_reply_by: 'admin' }), ...(status ? { status, closed_at: ['resolved', 'closed'].includes(status) ? now : null } : {}), assigned_to: user.id })
+          .eq('id', v.id);
+        break;
+      }
+      case 'ticket-update': {
+        const v = z
+          .object({
+            id: z.uuid(),
+            status: z.enum(['open', 'in_progress', 'waiting', 'resolved', 'closed']).optional(),
+            priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+            category: z.enum(['question', 'bug', 'billing', 'account', 'security', 'feature', 'other']).optional(),
+          })
+          .parse(input);
+        const now = new Date().toISOString();
+        const { id, ...patch } = v;
+        const { error } = await db
+          .from('support_tickets')
+          .update({ ...patch, updated_at: now, ...(patch.status ? { closed_at: ['resolved', 'closed'].includes(patch.status) ? now : null } : {}) })
+          .eq('id', id);
+        if (error) throw error;
+        if (patch.status)
+          await db.from('support_ticket_messages').insert({ ticket_id: id, author_kind: 'system', author_name: 'System', body: `Status: ${patch.status}`, internal: true });
+        break;
+      }
+      case 'ticket-create': {
+        const v = z.object({ business_id: z.uuid(), subject: z.string().trim().min(3).max(160), text: z.string().trim().min(1).max(8000), priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal') }).parse(input);
+        const { data: ticket, error } = await db.from('support_tickets').insert({ business_id: v.business_id, subject: v.subject, priority: v.priority, status: 'waiting', last_reply_by: 'admin', assigned_to: user.id }).select().single();
+        if (error) throw error;
+        await db.from('support_ticket_messages').insert({ ticket_id: ticket.id, author_kind: 'admin', author_id: user.id, author_name: 'Slotdove Support', body: v.text });
+        result = { ticket };
+        break;
+      }
+      case 'ticket-suggest': {
+        const id = z.uuid().parse(input.id);
+        const [{ data: ticket }, { data: messages }] = await Promise.all([
+          db.from('support_tickets').select('case_number,subject,category,businesses(name)').eq('id', id).single(),
+          db.from('support_ticket_messages').select('author_kind,body,internal').eq('ticket_id', id).order('created_at').limit(30),
+        ]);
+        if (!ticket) throw new HttpError(404, 'NOT_FOUND');
+        const reply = await groqChat({
+          temperature: 0.4,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Du bist Support-Mitarbeiter von Slotdove, einer Terminbuchungs-App für kleine Unternehmen (Kalender, Online-Buchungsseite, Wochenplan, Feiertage, Chat, Erinnerungen, Tarife Starter 5 €, Pro 15 €, Business 25 €). Schreibe eine freundliche, konkrete, kurze Antwort auf Deutsch in der Du-Form, mit Schritt-für-Schritt-Anleitung falls passend. Versprich nichts, was du nicht weißt. Keine Signatur-Platzhalter.',
+            },
+            {
+              role: 'user',
+              content: `Fall ${ticket.case_number} – ${ticket.subject} (Kategorie ${ticket.category})\n\n${(messages || [])
+                .filter((m) => !m.internal)
+                .map((m) => `${m.author_kind === 'admin' ? 'Support' : 'Kunde'}: ${m.body}`)
+                .join('\n\n')}\n\nSchreibe die nächste Antwort des Supports.`,
+            },
+          ],
+        });
+        result = { suggestion: reply.content || '' };
         break;
       }
       case 'ban': {
