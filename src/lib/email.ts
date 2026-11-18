@@ -39,8 +39,21 @@ export function appointmentEmail(input: {
     html: `<!doctype html><html lang="${de ? 'de' : 'en'}"><body style="margin:0;background:#f6f5fa;font-family:Arial,sans-serif;color:#282631"><div style="max-width:520px;margin:40px auto;padding:36px;background:#fff;border-radius:16px"><div style="font-size:24px;font-weight:bold;color:#7460db">slotdove.</div><h1 style="font-size:25px;line-height:1.3;margin-top:35px">${subject}</h1><p>${safe.business}</p><div style="padding:22px;background:#f4f1fc;border-radius:12px;margin:25px 0"><strong>${safe.service}</strong>${input.bookingNumber ? `<p style="font-family:monospace;font-size:15px;color:#6a46f5;margin:6px 0">${de ? 'Buchungsnummer' : 'Booking number'}: <b>${escapeHtml(input.bookingNumber)}</b></p>` : ''}<p>${safe.date}<br><small>${safe.timezone}</small></p><p>${safe.address}</p></div><p style="font-size:12px;color:#777">${de ? 'Für Änderungen nutze den privaten Link auf deiner Buchungsbestätigung oder kontaktiere das Unternehmen.' : 'To make changes, use the private link on your booking confirmation page or contact the business.'}</p><p style="font-size:10px;color:#999;margin-top:30px">Your time. Beautifully booked.</p></div></body></html>`,
   };
 }
+/** Accepts common ways of writing the sender and returns "Name <email>". */
+export function normalizeFrom(raw: string | undefined) {
+  const value = (raw || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
+  if (!value) return '';
+  const email = value.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)?.[0];
+  if (email) {
+    const name = value.replace(email, '').replace(/[<>"'`()]/g, '').trim();
+    return `${name || 'Slotdove'} <${email}>`;
+  }
+  // Only a domain was given, e.g. "slotdove.de".
+  const domain = value.match(/^(?:https?:\/\/)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)\/?$/i)?.[1];
+  return domain ? `Slotdove <termine@${domain.toLowerCase()}>` : '';
+}
 export function emailConfigured() {
-  return !!process.env.RESEND_API_KEY?.trim() && !!process.env.EMAIL_FROM?.trim();
+  return !!process.env.RESEND_API_KEY?.trim() && !!normalizeFrom(process.env.EMAIL_FROM);
 }
 export async function sendEmail(input: {
   to: string;
@@ -49,7 +62,7 @@ export async function sendEmail(input: {
   idempotencyKey: string;
 }) {
   const key = process.env.RESEND_API_KEY?.trim(),
-    from = process.env.EMAIL_FROM?.trim().replace(/^["']|["']$/g, '');
+    from = normalizeFrom(process.env.EMAIL_FROM);
   if (!key || !from) return { state: 'unavailable' as const };
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',

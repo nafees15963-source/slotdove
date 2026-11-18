@@ -15,7 +15,7 @@ import { scoreUsers } from '@/lib/ai/anomaly';
 import { ensureConversation, postMessage } from '@/lib/chat';
 import { logActivity } from '@/lib/activity';
 import { notifyTicketReply, processQueue, registerAppUrl, sendSoon } from '@/lib/notifications';
-import { emailConfigured, noticeEmail, sendEmail } from '@/lib/email';
+import { emailConfigured, normalizeFrom, noticeEmail, sendEmail } from '@/lib/email';
 import { aiConfigured, groqChat } from '@/lib/groq';
 const plan = z.enum(['free', 'pro', 'business']);
 export async function GET(request: Request) {
@@ -32,7 +32,8 @@ export async function GET(request: Request) {
       const { data: stats } = await db.rpc('email_queue_stats');
       return json({
         resend_key: !!process.env.RESEND_API_KEY?.trim(),
-        email_from: process.env.EMAIL_FROM?.trim() || null,
+        email_from: normalizeFrom(process.env.EMAIL_FROM) || null,
+        email_from_raw: process.env.EMAIL_FROM ? process.env.EMAIL_FROM.trim().slice(0, 120) : null,
         configured: emailConfigured(),
         site_url: process.env.NEXT_PUBLIC_SITE_URL || null,
         stats,
@@ -440,7 +441,7 @@ export async function POST(request: Request) {
         if (!emailConfigured()) throw new HttpError(400, 'EMAIL_NOT_CONFIGURED');
         try {
           const r = await sendEmail({
-            ...noticeEmail({ locale: 'de', title: 'Slotdove Test-E-Mail ✅', lines: ['Wenn du diese E-Mail liest, funktioniert der Versand über Resend.', `Absender: ${process.env.EMAIL_FROM}`] }),
+            ...noticeEmail({ locale: 'de', title: 'Slotdove Test-E-Mail ✅', lines: ['Wenn du diese E-Mail liest, funktioniert der Versand über Resend.', `Absender: ${normalizeFrom(process.env.EMAIL_FROM)}`] }),
             to,
             idempotencyKey: `test-${Date.now()}`,
           });

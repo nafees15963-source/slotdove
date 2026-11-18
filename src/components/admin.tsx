@@ -1542,6 +1542,7 @@ function AdminTicketView({ id, action, emailOf, onBusiness }: { id: string; acti
 type EmailState = {
   resend_key: boolean;
   email_from: string | null;
+  email_from_raw: string | null;
   configured: boolean;
   site_url: string | null;
   stats: { due: number; app_url: string | null; by_status: Record<string, number>; cron_active: boolean; last_accepted: string | null; last_cron_run: string | null; recent_errors: string[] } | null;
@@ -1559,7 +1560,11 @@ function EmailStatus({ action }: { action: ActionFn }) {
   if (!s) return <div className="skeleton-grid">{Array.from({ length: 3 }, (_, i) => <div className="skeleton" key={i} />)}</div>;
   const checks: [boolean, string, string][] = [
     [s.resend_key, de ? 'Resend-Schlüssel (RESEND_API_KEY)' : 'Resend key (RESEND_API_KEY)', de ? 'In Vercel → Settings → Environment Variables eintragen.' : 'Add in Vercel → Settings → Environment Variables.'],
-    [!!s.email_from, `${de ? 'Absender (EMAIL_FROM)' : 'Sender (EMAIL_FROM)'}${s.email_from ? `: ${s.email_from}` : ''}`, de ? 'z. B. Slotdove <termine@deine-domain.de> – Domain muss in Resend verifiziert sein.' : 'e.g. Slotdove <bookings@your-domain.com> – domain must be verified in Resend.'],
+    [
+      !!s.email_from,
+      `${de ? 'Absender (EMAIL_FROM)' : 'Sender (EMAIL_FROM)'}${s.email_from ? `: ${s.email_from}` : s.email_from_raw ? ` – ${de ? 'ungültig' : 'invalid'}: „${s.email_from_raw}“` : ''}`,
+      de ? 'Format: termine@deine-domain.de oder Slotdove <termine@deine-domain.de>. Die Domain muss in Resend verifiziert sein.' : 'Format: bookings@your-domain.com or Slotdove <bookings@your-domain.com>. The domain must be verified in Resend.',
+    ],
     [!!s.stats?.cron_active, de ? 'Automatischer Versand (Supabase-Zeitplan alle 2 Min.)' : 'Automatic delivery (Supabase schedule every 2 min)', de ? 'Wird von Slotdove automatisch eingerichtet.' : 'Set up automatically.'],
     [!!s.stats?.app_url, `${de ? 'Website-Adresse bekannt' : 'Site address known'}${s.stats?.app_url ? `: ${s.stats.app_url}` : ''}`, de ? 'Wird beim ersten Aufruf dieser Seite auf der Live-Domain gespeichert.' : 'Stored on first visit on the live domain.'],
   ];
