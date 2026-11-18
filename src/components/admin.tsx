@@ -15,6 +15,9 @@ import {
   Flag,
   FlaskConical,
   LayoutDashboard,
+  Mail,
+  CheckCircle2,
+  XCircle,
   LifeBuoy,
   Wand2,
   LogOut,
@@ -86,7 +89,7 @@ type AdminData = {
   tickets: AdminTicket[];
 };
 type AdminTicket = { id: string; case_number: string; business_id: string | null; user_id: string | null; contact_email: string; subject: string; category: string; priority: string; status: TicketStatus; assigned_to: string | null; last_reply_by: string; created_at: string; updated_at: string };
-type Tab = 'overview' | 'support' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
+type Tab = 'overview' | 'support' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
 const bannedNow = (until: string | null | undefined) => !!until && Date.parse(until) > Date.now();
 const fmt = (iso: string | null | undefined, locale: string) =>
   iso ? new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso)) : '—';
@@ -168,6 +171,7 @@ function AdminConsole() {
     ['users', Users, de ? 'Benutzer' : 'Users', data?.risks.filter((r) => r.score >= 0.5).length || undefined],
     ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined],
     ['features', FlaskConical, de ? 'Beta & Funktionen' : 'Beta & features'],
+    ['email', Mail, de ? 'E-Mail-Versand' : 'Email delivery'],
     ['announcements', Megaphone, de ? 'Mitteilungen' : 'Announcements'],
     ['logs', ScrollText, de ? 'Protokolle' : 'Logs'],
   ];
@@ -308,6 +312,7 @@ function AdminConsole() {
           </>
         )}
         {data && tab === 'support' && <SupportPanel data={data} action={action} nameOf={nameOf} emailOf={emailOf} onBusiness={setBusiness} />}
+        {data && tab === 'email' && <EmailStatus action={action} />}
         {data && tab === 'businesses' && <BusinessTable data={data} emailOf={emailOf} onOpen={setBusiness} />}
         {data && tab === 'users' && <UserTable data={data} onOpen={setUser} />}
         {data && tab === 'moderation' && <Moderation data={data} action={action} nameOf={nameOf} />}
@@ -1530,6 +1535,96 @@ function AdminTicketView({ id, action, emailOf, onBusiness }: { id: string; acti
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+type EmailState = {
+  resend_key: boolean;
+  email_from: string | null;
+  configured: boolean;
+  site_url: string | null;
+  stats: { due: number; app_url: string | null; by_status: Record<string, number>; cron_active: boolean; last_accepted: string | null; last_cron_run: string | null; recent_errors: string[] } | null;
+};
+function EmailStatus({ action }: { action: ActionFn }) {
+  const { locale } = useI18n();
+  const de = locale === 'de';
+  const [s, setS] = useState<EmailState | null>(null);
+  const [to, setTo] = useState('');
+  const [test, setTest] = useState<string>('');
+  const load = useCallback(() => api<EmailState>('/api/admin?email=status').then(setS).catch((e) => toast.error(friendlyError(e, locale))), [locale]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (!s) return <div className="skeleton-grid">{Array.from({ length: 3 }, (_, i) => <div className="skeleton" key={i} />)}</div>;
+  const checks: [boolean, string, string][] = [
+    [s.resend_key, de ? 'Resend-Schlüssel (RESEND_API_KEY)' : 'Resend key (RESEND_API_KEY)', de ? 'In Vercel → Settings → Environment Variables eintragen.' : 'Add in Vercel → Settings → Environment Variables.'],
+    [!!s.email_from, `${de ? 'Absender (EMAIL_FROM)' : 'Sender (EMAIL_FROM)'}${s.email_from ? `: ${s.email_from}` : ''}`, de ? 'z. B. Slotdove <termine@deine-domain.de> – Domain muss in Resend verifiziert sein.' : 'e.g. Slotdove <bookings@your-domain.com> – domain must be verified in Resend.'],
+    [!!s.stats?.cron_active, de ? 'Automatischer Versand (Supabase-Zeitplan alle 2 Min.)' : 'Automatic delivery (Supabase schedule every 2 min)', de ? 'Wird von Slotdove automatisch eingerichtet.' : 'Set up automatically.'],
+    [!!s.stats?.app_url, `${de ? 'Website-Adresse bekannt' : 'Site address known'}${s.stats?.app_url ? `: ${s.stats.app_url}` : ''}`, de ? 'Wird beim ersten Aufruf dieser Seite auf der Live-Domain gespeichert.' : 'Stored on first visit on the live domain.'],
+  ];
+  const counts = s.stats?.by_status || {};
+  return (
+    <div className="stack">
+      <section className="panel panel-body stack">
+        <h3 className="panel-title">{de ? 'Einrichtung' : 'Setup'}</h3>
+        {checks.map(([ok, label, hint]) => (
+          <div key={label} className={`email-check ${ok ? 'ok' : 'bad'}`}>
+            {ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+            <span>
+              <strong>{label}</strong>
+              {!ok && <small className="block muted">{hint}</small>}
+            </span>
+          </div>
+        ))}
+      </section>
+      <div className="kpi-row">
+        {[
+          [de ? 'Zugestellt' : 'Delivered', counts.accepted || 0],
+          [de ? 'Wartend' : 'Waiting', (counts.queued || 0) + (counts.processing || 0)],
+          [de ? 'Fehler' : 'Failed', (counts.failed || 0) + (counts.unavailable || 0)],
+          [de ? 'Unterdrückt (Demo/aus)' : 'Suppressed', counts.suppressed || 0],
+        ].map(([l, v]) => (
+          <div className="kpi" key={String(l)}>
+            <small>{l}</small>
+            <strong>{v}</strong>
+          </div>
+        ))}
+      </div>
+      <section className="panel panel-body stack">
+        <h3 className="panel-title">{de ? 'Test-E-Mail senden' : 'Send a test email'}</h3>
+        <div className="row wrap">
+          <input className="filter-search" style={{ maxWidth: 320 }} type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder={de ? 'Empfänger (leer = deine Adresse)' : 'Recipient (empty = you)'} />
+          <Button
+            disabled={!s.configured}
+            onClick={async () => {
+              const r = await action({ action: 'email-test', to: to || undefined }, de ? 'Test ausgeführt' : 'Test done');
+              setTest(r ? (r.ok ? (de ? '✅ Von Resend angenommen. Schau in dein Postfach (auch Spam).' : '✅ Accepted by Resend. Check your inbox (and spam).') : `❌ ${String(r.error)}`) : '');
+            }}
+          >
+            <Mail size={14} /> {de ? 'Senden' : 'Send'}
+          </Button>
+          <Button variant="outline" onClick={async () => (await action({ action: 'email-retry' }, de ? 'Erneut versucht' : 'Retried'), load())}>
+            <RefreshCcw size={14} /> {de ? 'Fehlgeschlagene erneut senden' : 'Retry failed'}
+          </Button>
+        </div>
+        {test && <div className="notice">{test}</div>}
+        {!!s.stats?.recent_errors?.length && (
+          <div className="notice notice-error">
+            <div>
+              <strong>{de ? 'Letzte Fehler:' : 'Recent errors:'}</strong>
+              {s.stats.recent_errors.map((e, i) => (
+                <small className="block" key={i}>
+                  {e}
+                </small>
+              ))}
+            </div>
+          </div>
+        )}
+        <small className="muted">
+          {de ? 'Letzter Zeitplan-Lauf' : 'Last scheduler run'}: {fmt(s.stats?.last_cron_run, locale)} · {de ? 'Letzte Zustellung' : 'Last delivery'}: {fmt(s.stats?.last_accepted, locale)}
+        </small>
+      </section>
     </div>
   );
 }

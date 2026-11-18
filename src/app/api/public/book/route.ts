@@ -3,6 +3,7 @@ import { bookingSchema } from '@/lib/validation';
 import { body, failure, hashToken, json, rateLimit, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { logActivity } from '@/lib/activity';
+import { notifyOwner, sendSoon } from '@/lib/notifications';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -32,6 +33,8 @@ export async function POST(request: Request) {
       action: 'customer.booked',
       details: { booking_number: number?.booking_number, customer: input.name, starts_at: input.starts_at },
     });
+    sendSoon(request);
+    notifyOwner(request, input.business_id, number?.booking_number, input.name, input.starts_at);
     return json(
       {
         ...data,

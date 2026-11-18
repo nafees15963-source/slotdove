@@ -14,6 +14,8 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { scoreUsers } from '@/lib/ai/anomaly';
 import { ensureConversation, postMessage } from '@/lib/chat';
 import { logActivity } from '@/lib/activity';
+import { notifyTicketReply, processQueue, registerAppUrl, sendSoon } from '@/lib/notifications';
+import { emailConfigured, noticeEmail, sendEmail } from '@/lib/email';
 import { aiConfigured, groqChat } from '@/lib/groq';
 const plan = z.enum(['free', 'pro', 'business']);
 export async function GET(request: Request) {
@@ -25,6 +27,17 @@ export async function GET(request: Request) {
       businessId = url.searchParams.get('business'),
       conversationId = url.searchParams.get('conversation'),
       ticketId = url.searchParams.get('ticket');
+    if (url.searchParams.get('email') === 'status') {
+      await registerAppUrl(request);
+      const { data: stats } = await db.rpc('email_queue_stats');
+      return json({
+        resend_key: !!process.env.RESEND_API_KEY?.trim(),
+        email_from: process.env.EMAIL_FROM?.trim() || null,
+        configured: emailConfigured(),
+        site_url: process.env.NEXT_PUBLIC_SITE_URL || null,
+        stats,
+      });
+    }
     if (ticketId) {
       const id = z.uuid().parse(ticketId);
       const [{ data: ticket, error }, { data: messages }] = await Promise.all([
@@ -350,12 +363,14 @@ export async function POST(request: Request) {
         const { data, error } = await db.from('bookings').update({ status: v.status }).eq('id', v.id).select('business_id,booking_number').single();
         if (error) throw error;
         await audit('booking.status', data.business_id, { booking_number: data.booking_number, status: v.status });
+        sendSoon(request);
         break;
       }
       case 'ticket-reply': {
         const v = z.object({ id: z.uuid(), text: z.string().trim().min(1).max(8000), internal: z.boolean().default(false), status: z.enum(['open', 'in_progress', 'waiting', 'resolved', 'closed']).optional() }).parse(input);
         const { error } = await db.from('support_ticket_messages').insert({ ticket_id: v.id, author_kind: 'admin', author_id: user.id, author_name: 'Slotdove Support', body: v.text, internal: v.internal });
         if (error) throw error;
+        if (!v.internal) notifyTicketReply(request, v.id);
         const now = new Date().toISOString();
         const status = v.status || (v.internal ? undefined : 'waiting');
         await db
@@ -418,6 +433,26 @@ export async function POST(request: Request) {
           ],
         });
         result = { suggestion: reply.content || '' };
+        break;
+      }
+      case 'email-test': {
+        const to = z.email().parse(input.to || user.email);
+        if (!emailConfigured()) throw new HttpError(400, 'EMAIL_NOT_CONFIGURED');
+        try {
+          const r = await sendEmail({
+            ...noticeEmail({ locale: 'de', title: 'Slotdove Test-E-Mail ✅', lines: ['Wenn du diese E-Mail liest, funktioniert der Versand über Resend.', `Absender: ${process.env.EMAIL_FROM}`] }),
+            to,
+            idempotencyKey: `test-${Date.now()}`,
+          });
+          result = { ok: true, id: r.state === 'accepted' ? r.id : null };
+        } catch (e) {
+          result = { ok: false, error: e instanceof Error ? e.message.slice(0, 300) : 'failed' };
+        }
+        break;
+      }
+      case 'email-retry': {
+        await db.from('notification_jobs').update({ status: 'queued', attempts: 0, scheduled_at: new Date().toISOString(), last_error: null }).in('status', ['failed', 'unavailable']);
+        result = await processQueue(20);
         break;
       }
       case 'ban': {

@@ -3980,3 +3980,24 @@ code.num {
 .ai-explain .rich-li + p {
   margin-top: 8px;
 }
+.email-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--soft);
+}
+.email-check.ok svg {
+  color: var(--green);
+}
+.email-check.bad {
+  background: var(--red-soft);
+}
+.email-check.bad svg {
+  color: var(--red);
+}
+.email-check svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}

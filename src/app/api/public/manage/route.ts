@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { body, failure, hashToken, json, rateLimit, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { logActivity } from '@/lib/activity';
+import { sendSoon } from '@/lib/notifications';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
     if (error) throw error;
     const result = data as { id: string; business_id: string };
     const { data: number } = await supabaseAdmin().from('bookings').select('booking_number,customer_name').eq('id', result.id).single();
+    if (action !== 'view') sendSoon(request);
     if (action !== 'view')
       void logActivity(request, {
         business_id: result.business_id,

@@ -22,6 +22,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { csv } from '@/lib/utils';
 import { calendarFile } from '@/lib/scheduling/engine';
 import { logActivity } from '@/lib/activity';
+import { sendSoon } from '@/lib/notifications';
 import { fromZonedTime } from 'date-fns-tz';
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const internalBookingSchema = z.object({
@@ -259,6 +260,7 @@ export async function POST(request: Request, context: Context) {
         .select()
         .single();
       if (error) throw error;
+      sendSoon(request);
       return json(data, 201);
     }
     if (resource === 'booking-status') {
@@ -272,6 +274,7 @@ export async function POST(request: Request, context: Context) {
         })
         .parse(input);
       const { id: bookingId, ...patch } = fields;
+      if (patch.status || patch.starts_at) sendSoon(request);
       if (role === 'staff' && fields.starts_at) throw new HttpError(403, 'FORBIDDEN');
       const { data, error } = await db
         .from('bookings')

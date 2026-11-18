@@ -1,102 +1,34 @@
 import { timingSafeEqual } from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { appointmentEmail, sendEmail } from '@/lib/email';
+import { emailConfigured } from '@/lib/email';
 import { json } from '@/lib/http';
-import { dateLabel } from '@/lib/utils';
+import { processQueue, registerAppUrl } from '@/lib/notifications';
 export const maxDuration = 60;
-export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET,
-    header = request.headers.get('authorization') || '';
-  if (
-    !secret ||
-    Buffer.byteLength(header) !== Buffer.byteLength(`Bearer ${secret}`) ||
-    !timingSafeEqual(Buffer.from(header), Buffer.from(`Bearer ${secret}`))
-  )
-    return json({ error: 'FORBIDDEN' }, 403);
-  const db = supabaseAdmin();
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM)
-    return json(
-      {
-        status: 'unavailable',
-        reason: 'Configure Resend and a verified sender before enabling the worker.',
-      },
-      503,
-    );
-  const { data: jobs, error } = await db.rpc('claim_notifications', { p_limit: 3 });
-  if (error) return json({ error: 'QUEUE_UNAVAILABLE' }, 503);
-  let accepted = 0,
-    failed = 0;
-  for (const job of jobs || []) {
+function same(a: string, b: string) {
+  return Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+/** Called by the Supabase scheduler (pg_cron) every 2 minutes when emails are due,
+ * or by Vercel Cron with CRON_SECRET. */
+async function handle(request: Request) {
+  const header = request.headers.get('authorization') || '';
+  let allowed = !!process.env.CRON_SECRET && same(header, `Bearer ${process.env.CRON_SECRET}`);
+  if (!allowed) {
     try {
-      const { data: booking, error: be } = await db
-        .from('bookings')
-        .select(
-          '*,businesses!inner(name,timezone,locale,address,is_demo,status,notifications_enabled),customers!inner(email)',
-        )
-        .eq('id', job.booking_id)
-        .single();
-      if (be || !booking) throw new Error('BOOKING_MISSING');
-      if (
-        !booking.customers.email ||
-        booking.is_sample ||
-        booking.businesses.is_demo ||
-        !booking.businesses.notifications_enabled ||
-        booking.businesses.status !== 'active' ||
-        (job.kind === 'reminder' && booking.status !== 'confirmed') ||
-        (['confirmation', 'reschedule'].includes(job.kind) &&
-          ['cancelled', 'completed', 'no_show'].includes(booking.status))
-      ) {
-        await db
-          .from('notification_jobs')
-          .update({ status: 'suppressed', locked_until: null })
-          .eq('id', job.id);
-        continue;
-      }
-      const email = appointmentEmail({
-        kind: job.kind,
-        locale: booking.businesses.locale,
-        business: booking.businesses.name,
-        service: booking.service_name,
-        date: dateLabel(booking.starts_at, booking.businesses.timezone, booking.businesses.locale),
-        timezone: booking.businesses.timezone,
-        status: booking.status,
-        address: booking.businesses.address,
-        bookingNumber: booking.booking_number,
-      });
-      const result = await sendEmail({
-        ...email,
-        to: booking.customers.email,
-        idempotencyKey: job.id,
-      });
-      const { error: saveError } = await db
-        .from('notification_jobs')
-        .update({
-          status: result.state,
-          provider_id: result.state === 'accepted' ? result.id : null,
-          last_error: null,
-          locked_until: null,
-        })
-        .eq('id', job.id);
-      if (saveError) throw new Error('STATUS_UPDATE_FAILED');
-      if (result.state === 'accepted') accepted++;
-    } catch (e) {
-      failed++;
-      const safe =
-        e instanceof Error && /^EMAIL_PROVIDER_\d+$/.test(e.message)
-          ? e.message
-          : 'DELIVERY_FAILED';
-      await db
-        .from('notification_jobs')
-        .update({
-          status: 'failed',
-          last_error: safe,
-          scheduled_at: new Date(
-            Date.now() + Math.min(60, 2 ** job.attempts) * 60000,
-          ).toISOString(),
-          locked_until: null,
-        })
-        .eq('id', job.id);
+      const { data } = await supabaseAdmin().rpc('get_app_setting', { p_key: 'cron_secret' });
+      allowed = typeof data === 'string' && data.length >= 32 && same(header, `Bearer ${data}`);
+    } catch {
+      allowed = false;
     }
   }
-  return json({ accepted, failed });
+  if (!allowed) return json({ error: 'FORBIDDEN' }, 403);
+  await registerAppUrl(request);
+  if (!emailConfigured())
+    return json({ status: 'unavailable', reason: 'Set RESEND_API_KEY and EMAIL_FROM (verified domain) in Vercel.' }, 503);
+  try {
+    return json(await processQueue(20));
+  } catch {
+    return json({ error: 'QUEUE_UNAVAILABLE' }, 503);
+  }
 }
+export const GET = handle;
+export const POST = handle;
