@@ -15,7 +15,7 @@ function apiKey() {
 export function aiConfigured() {
   return !!apiKey();
 }
-export async function groqChat(input: { messages: ChatMessage[]; tools?: ToolSpec[]; temperature?: number; maxTokens?: number }) {
+export async function groqChat(input: { messages: ChatMessage[]; tools?: ToolSpec[]; temperature?: number; maxTokens?: number; reasoning?: 'low' | 'medium' | 'high' }) {
   const key = apiKey();
   if (!key) throw new Error('AI_NOT_CONFIGURED');
   let lastError = '';
@@ -29,7 +29,9 @@ export async function groqChat(input: { messages: ChatMessage[]; tools?: ToolSpe
         tools: input.tools?.length ? input.tools : undefined,
         tool_choice: input.tools?.length ? 'auto' : undefined,
         temperature: input.temperature ?? 0.3,
-        max_completion_tokens: input.maxTokens ?? 1000,
+        max_completion_tokens: input.maxTokens ?? 1500,
+        // gpt-oss models think before answering; keep that short for quick tasks.
+        reasoning_effort: model.startsWith('openai/gpt-oss') ? input.reasoning || 'medium' : undefined,
       }),
       signal: AbortSignal.timeout(25000),
     });

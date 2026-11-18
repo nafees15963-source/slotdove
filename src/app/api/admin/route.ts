@@ -401,6 +401,7 @@ export async function POST(request: Request) {
         if (!ticket) throw new HttpError(404, 'NOT_FOUND');
         const reply = await groqChat({
           temperature: 0.4,
+          reasoning: 'low',
           messages: [
             {
               role: 'system',

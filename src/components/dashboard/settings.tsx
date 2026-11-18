@@ -3,6 +3,7 @@ import { InfoTip } from '../tutorial';
 import type { Visual } from '@/lib/tutorials';
 import { industries, industryById } from '@/lib/industries';
 import { computeInsights } from '@/lib/ai/insights';
+import { Rich } from './assistant';
 import { useState } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
 import { LogoUpload } from '../logo-upload';
@@ -303,7 +304,9 @@ export function Analytics() {
   const w = useWorkspace(),
     { t, locale } = useI18n();
   const [stats, setStats] = useState(w.stats),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [explaining, setExplaining] = useState(false),
+    [explanation, setExplanation] = useState('');
   return (
     <>
       <Heading title={t.analytics} description={t.thisMonth} />
@@ -363,7 +366,44 @@ export function Analytics() {
       </div>
       {w.features.includes('assistant') && (
         <div className="panel panel-body insights-card" style={{ marginTop: 24 }}>
-          <h3 className="panel-title">✨ {locale === 'de' ? 'KI-Einschätzung' : 'AI assessment'}</h3>
+          <div className="spread wrap">
+            <h3 className="panel-title">✨ {locale === 'de' ? 'KI-Einschätzung' : 'AI assessment'}</h3>
+            <Button
+              size="sm"
+              className="btn-ai"
+              disabled={explaining}
+              onClick={async () => {
+                setExplaining(true);
+                try {
+                  const r = await api<{ text?: string; fallback?: boolean }>('/api/ai', 'POST', {
+                    business: w.business.id,
+                    locale,
+                    messages: [
+                      {
+                        role: 'user',
+                        content:
+                          locale === 'de'
+                            ? 'Analysiere meine Zahlen: Vergleiche die letzten 30 Tage mit den 30 Tagen davor (Termine, Umsatz, No-Shows, beliebte Leistungen, starke und schwache Wochentage/Uhrzeiten) und gib mir 3 konkrete, umsetzbare Empfehlungen.'
+                            : 'Analyse my numbers: compare the last 30 days with the 30 days before (appointments, revenue, no-shows, popular services, strong and weak weekdays/hours) and give me 3 concrete, actionable recommendations.',
+                      },
+                    ],
+                  });
+                  setExplanation(r.fallback || !r.text ? (locale === 'de' ? 'Die KI ist gerade nicht erreichbar. Unten siehst du die Offline-Einschätzung.' : 'AI is unavailable right now. See the offline assessment below.') : r.text);
+                } catch {
+                  setExplanation(locale === 'de' ? 'Die KI ist gerade nicht erreichbar.' : 'AI is unavailable right now.');
+                } finally {
+                  setExplaining(false);
+                }
+              }}
+            >
+              {explaining ? <span className="spinner" /> : '✨'} {locale === 'de' ? 'KI erklärt meine Zahlen' : 'AI explains my numbers'}
+            </Button>
+          </div>
+          {explanation && (
+            <div className="ai-explain fade-in">
+              <Rich text={explanation} />
+            </div>
+          )}
           <div className="insight-list">
             {computeInsights(w).map((i) => (
               <div key={i.id} className={`insight ${i.tone}`}>

@@ -10,7 +10,7 @@ import { api } from '@/lib/api-client';
 
 type Remote = { text: string; booking?: { serviceId?: string; staffId?: string; date?: string; time?: string; name?: string; phone?: string }; fallback?: boolean; reason?: string; code?: string };
 /** Tiny, safe markdown: **bold**, lists, line breaks. */
-function Rich({ text }: { text: string }) {
+export function Rich({ text }: { text: string }) {
   const lines = text.split(/\n+/).filter((l) => l.trim());
   const inline = (l: string) => l.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (part.startsWith('**') && part.endsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : <span key={i}>{part}</span>));
   return (

@@ -34,6 +34,7 @@ export function EntityForm({
     [error, setError] = useState(''),
     [inviteLink, setInviteLink] = useState(''),
     [emailStatus, setEmailStatus] = useState(''),
+    [writing, setWriting] = useState(false),
     [selectedService, setSelectedService] = useState(w.services.find((s) => s.active)?.id || '');
   const init = initial as Partial<Service & Customer & Staff> | undefined;
   const title =
@@ -215,7 +216,40 @@ export function EntityForm({
                 {input('buffer_before', t.before, 'number', init?.buffer_before ?? 0, true, 0, 120)}
                 {input('buffer_after', t.after, 'number', init?.buffer_after ?? 0, true, 0, 120)}
                 <div className="field full">
-                  <label htmlFor="description">{t.description}</label>
+                  <label htmlFor="description">
+                    {t.description}
+                    {w.features.includes('assistant') && (
+                      <button
+                        type="button"
+                        className="ai-mini"
+                        disabled={writing}
+                        onClick={async (e) => {
+                          const form = (e.currentTarget as HTMLButtonElement).form!;
+                          const nameValue = (form.elements.namedItem('name') as HTMLInputElement).value.trim();
+                          if (nameValue.length < 2) return toast.error(locale === 'de' ? 'Gib zuerst einen Namen ein.' : 'Enter a name first.');
+                          setWriting(true);
+                          try {
+                            const r = await api<{ text: string }>('/api/ai/write', 'POST', {
+                              business: w.business.id,
+                              locale,
+                              mode: 'service_description',
+                              name: nameValue,
+                              minutes: Number((form.elements.namedItem('duration_minutes') as HTMLInputElement).value) || undefined,
+                              price: `${(form.elements.namedItem('price') as HTMLInputElement).value} ${w.business.currency}`,
+                            });
+                            (form.elements.namedItem('description') as HTMLTextAreaElement).value = r.text;
+                          } catch (err) {
+                            toast.error(locale === 'de' ? 'Die KI ist gerade nicht erreichbar.' : 'AI is unavailable right now.');
+                            console.warn(err);
+                          } finally {
+                            setWriting(false);
+                          }
+                        }}
+                      >
+                        {writing ? <span className="spinner" /> : '✨'} {locale === 'de' ? 'Mit KI schreiben' : 'Write with AI'}
+                      </button>
+                    )}
+                  </label>
                   <textarea
                     id="description"
                     name="description"

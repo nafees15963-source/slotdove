@@ -69,7 +69,7 @@ export function Overview() {
             data-tour="quick-add"
             onSubmit={(e) => {
               e.preventDefault();
-              ui.openBooking({ ...(parsed || {}), text: quick });
+              ui.openBooking({ ...(parsed || {}), text: quick, smart: true });
               setQuick('');
             }}
           >

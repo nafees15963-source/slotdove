@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
@@ -18,7 +18,8 @@ const addDays = (iso: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-export type BookingPrefill = Partial<ParsedBooking> & { text?: string };
+export type BookingPrefill = Partial<ParsedBooking> & { text?: string; smart?: boolean };
+const vague = /naechst|nächst|irgendwann|nachmittag|vormittag|abends|frueh|früh|spaet|spät|woche|bald|lieber|am liebsten|egal|next|afternoon|morning|evening|soon|whenever|prefer/i;
 /** Simple appointment dialog: service → day → time → name. Everything else optional. */
 export function BookingDialog({ open, onClose, prefill }: { open: boolean; onClose: () => void; prefill?: BookingPrefill }) {
   const w = useWorkspace(),
@@ -71,6 +72,68 @@ export function BookingDialog({ open, onClose, prefill }: { open: boolean; onClo
     }
     return parsed;
   }
+  const [smartBusy, setSmartBusy] = useState(false);
+  const [smartNote, setSmartNote] = useState('');
+  /** Local parser first (instant); Groq resolves vague or incomplete sentences. */
+  async function smartFill(value: string) {
+    if (!value.trim()) return;
+    const local = applyText(value);
+    setSmartNote('');
+    const complete = local.serviceId && local.time && local.name && local.date;
+    if (complete && !vague.test(value)) {
+      toast.message(de ? `Erkannt: ${local.understood.length} Angaben` : `Understood ${local.understood.length} details`);
+      return;
+    }
+    setSmartBusy(true);
+    try {
+      const r = await api<{ text?: string; fallback?: boolean; booking?: { serviceId?: string; staffId?: string; date?: string; time?: string; name?: string; phone?: string; notes?: string } }>('/api/ai', 'POST', {
+        business: w.business.id,
+        locale,
+        mode: 'booking',
+        messages: [{ role: 'user', content: value }],
+      });
+      if (r.fallback || !r.booking) {
+        if (r.text) setSmartNote(r.text);
+        return;
+      }
+      const b = r.booking;
+      if (b.serviceId && services.some((x) => x.id === b.serviceId)) setServiceId(b.serviceId);
+      if (b.date) setDate(b.date);
+      if (b.time) setTime(b.time);
+      if (b.staffId && staff.some((x) => x.id === b.staffId)) {
+        setStaffId(b.staffId);
+        setMore(true);
+      }
+      if (b.name) {
+        setName(b.name);
+        const known = w.customers.find((c) => c.name.toLowerCase() === b.name!.toLowerCase());
+        setCustomerId(known ? known.id : null);
+        if (known) {
+          setPhone(known.phone);
+          setEmail(known.email || '');
+        }
+      }
+      if (b.phone) {
+        setPhone(b.phone);
+        setMore(true);
+      }
+      if (b.notes) setNotes(b.notes);
+      setSmartNote(r.text || '');
+    } catch {
+      /* the local result stays */
+    } finally {
+      setSmartBusy(false);
+    }
+  }
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (prefill?.smart && prefill.text && !autoRan.current) {
+      autoRan.current = true;
+      void smartFill(prefill.text);
+    }
+    // Runs once when opened from the quick-add field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Non-blocking hints. The team may book outside hours on purpose.
   const warnings: string[] = [];
   if (time && service) {
@@ -132,16 +195,20 @@ export function BookingDialog({ open, onClose, prefill }: { open: boolean; onClo
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  const p = applyText(text);
-                  toast.message(de ? `Erkannt: ${p.understood.length} Angaben` : `Understood ${p.understood.length} details`);
+                  void smartFill(text);
                 }
               }}
               aria-label={de ? 'Termin in einem Satz beschreiben' : 'Describe the appointment in one sentence'}
             />
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => applyText(text)} disabled={!text.trim()}>
-              <Wand2 size={14} />
-              {de ? 'Ausfüllen' : 'Fill in'}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => smartFill(text)} disabled={!text.trim() || smartBusy}>
+              {smartBusy ? <span className="spinner" /> : <Wand2 size={14} />}
+              {smartBusy ? (de ? 'KI denkt …' : 'Thinking …') : de ? 'Ausfüllen' : 'Fill in'}
             </button>
+          </div>
+        )}
+        {smartNote && (
+          <div className="ai-note fade-in">
+            <Sparkles size={14} /> {smartNote}
           </div>
         )}
         <div className="step-block">

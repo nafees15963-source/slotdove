@@ -3936,3 +3936,47 @@ code.num {
   grid-template-columns: minmax(0, 640px);
   justify-content: center;
 }
+.ai-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--purple-soft);
+  color: var(--ink);
+  font-size: 14px;
+}
+.ai-note svg {
+  color: var(--purple);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.ai-mini {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 99px;
+  padding: 3px 10px;
+  background: var(--grad);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ai-mini .spinner {
+  width: 12px;
+  height: 12px;
+}
+.ai-explain {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--purple-soft);
+  line-height: 1.6;
+}
+.ai-explain p + p,
+.ai-explain p + .rich-li,
+.ai-explain .rich-li + p {
+  margin-top: 8px;
+}

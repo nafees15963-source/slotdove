@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Flag, LifeBuoy, MessageCircle, Send, ShieldAlert, Users, UserRound } from 'lucide-react';
+import { Flag, LifeBuoy, MessageCircle, Send, ShieldAlert, Sparkles, Users, UserRound } from 'lucide-react';
 import { useWorkspace, useWorkspaceUI } from './shell';
 import { useI18n } from '../providers';
 import { api, friendlyError } from '@/lib/api-client';
@@ -23,6 +23,19 @@ export function Chat() {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  async function draft() {
+    if (!current) return;
+    setDrafting(true);
+    try {
+      const r = await api<{ text: string }>('/api/ai/write', 'POST', { business: w.business.id, locale, mode: 'chat_reply', conversation: current });
+      setText(r.text);
+    } catch {
+      toast.error(de ? 'Die KI ist gerade nicht erreichbar.' : 'AI is unavailable right now.');
+    } finally {
+      setDrafting(false);
+    }
+  }
   const list = useRef<HTMLDivElement>(null);
   const loadConversations = useCallback(async () => {
     try {
@@ -168,6 +181,11 @@ export function Chat() {
                 }}
                 aria-label={de ? 'Nachricht' : 'Message'}
               />
+              {w.features.includes('assistant') && (
+                <button type="button" className="btn btn-ai btn-icon" onClick={draft} disabled={drafting || !current} title={de ? 'Antwort mit KI vorschlagen' : 'Draft reply with AI'} aria-label={de ? 'Antwort mit KI vorschlagen' : 'Draft reply with AI'}>
+                  {drafting ? <span className="spinner" /> : <Sparkles size={16} />}
+                </button>
+              )}
               <button className="btn btn-primary btn-icon" disabled={sending || !text.trim() || !current} aria-label={de ? 'Senden' : 'Send'}>
                 {sending ? <span className="spinner" /> : <Send size={16} />}
               </button>
