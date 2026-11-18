@@ -108,6 +108,7 @@ const actionLabel = (a: string) =>
     'support.ticket': 'Supportfall eröffnet',
     'support.reply': 'Supportfall beantwortet',
     'ai.ask': 'KI-Frage gestellt',
+    'ai.error': 'KI-Fehler',
   })[a] || a;
 
 export function Admin() {
@@ -1051,6 +1052,8 @@ function ActivityFeed({ rows, emailOf, nameOf }: { rows: ActivityRow[]; emailOf?
             {actionLabel(a.action)}
             {typeof a.details?.customer === 'string' && <strong> · {a.details.customer}</strong>}
             {typeof a.details?.booking_number === 'string' && <code> {a.details.booking_number}</code>}
+            {typeof a.details?.question === 'string' && <small className="block muted">„{a.details.question}“</small>}
+            {typeof a.details?.error === 'string' && <small className="block danger-text">{a.details.error}</small>}
             {nameOf && a.business_id && <small> · {nameOf.get(a.business_id)}</small>}
             {a.user_agent && <small className="block muted">{a.user_agent.slice(0, 80)}</small>}
           </span>

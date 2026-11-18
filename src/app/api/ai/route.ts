@@ -3,6 +3,7 @@ import { body, failure, HttpError, json, rateLimit, requireBusiness, sameOrigin 
 import { aiConfigured } from '@/lib/groq';
 import { think, type BrainData } from '@/lib/ai/brain';
 import { logActivity } from '@/lib/activity';
+export const maxDuration = 60;
 /** Server-side assistant (Groq). Data is read with the signed-in user's own
  * permissions, so staff only see what they may see. Falls back to the local
  * assistant in the browser when unavailable. */
@@ -64,8 +65,12 @@ export async function POST(request: Request) {
     try {
       const result = await think(data, input.messages, input.locale);
       return json(result);
-    } catch {
-      return json({ fallback: true, reason: 'unavailable' });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      // Visible to platform admins in the activity log for diagnosis.
+      void logActivity(request, { user_id: user.id, business_id: input.business, action: 'ai.error', details: { error: message.slice(0, 300) } });
+      const code = /AI_UNAVAILABLE:(\d+)/.exec(message)?.[1] || (/abort|timeout/i.test(message) ? 'timeout' : 'error');
+      return json({ fallback: true, reason: 'unavailable', code });
     }
   } catch (e) {
     return failure(e);

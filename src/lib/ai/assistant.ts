@@ -42,6 +42,15 @@ export function answer(question: string, w: Workspace, locale: 'de' | 'en'): Ass
   const on = (d: string) => live.filter((b) => formatInTimeZone(b.starts_at, tz, 'yyyy-MM-dd') === d).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   if (!q.trim()) return { text: de ? 'Frag mich etwas, z. B. „Was steht heute an?“' : 'Ask me something, e.g. “What’s on today?”' };
 
+  // 0. Small talk.
+  if (/^(hallo|hi|hey|moin|servus|guten (morgen|tag|abend)|hello|good (morning|evening))\b/.test(q.trim()) || has(q, 'wie geht', 'how are you', 'wer bist du', 'who are you', 'bist du', 'danke', 'thank'))
+    return {
+      text: has(q, 'danke', 'thank')
+        ? de ? 'Gern geschehen! 😊' : 'You are welcome! 😊'
+        : de
+          ? 'Mir geht’s gut, danke! Ich bin die Slotdove KI und helfe dir mit Terminen, freien Zeiten, Zahlen und Fragen zur Bedienung. Was kann ich für dich tun?'
+          : 'I’m good, thanks! I’m Slotdove AI and help with appointments, free times, numbers and how-to questions. What can I do for you?',
+    };
   // 1. Commands that create appointments.
   if (has(q, 'termin (fuer|eintragen|anlegen|buchen)', 'neuer termin', 'trag', 'buche', 'book ', 'new appointment', 'add appointment') || (parseBookingText(question, { today, services: w.services, staff: w.staff }).understood.length >= 3 && !q.includes('?') && !has(q, 'wann', 'was', 'wie', 'wer', 'when', 'what', 'how', 'who', 'frei', 'free'))) {
     const parsed = parseBookingText(question, { today, services: w.services.filter((s) => s.active), staff: w.staff.filter((s) => s.active) });

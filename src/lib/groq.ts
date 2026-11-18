@@ -8,11 +8,15 @@ export type ToolCall = { id: string; type: 'function'; function: { name: string;
 export type ToolSpec = { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } };
 export const AI_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 export const AI_FALLBACK_MODEL = 'openai/gpt-oss-20b';
+/** Tolerates keys pasted with spaces, quotes or a "Bearer " prefix. */
+function apiKey() {
+  return (process.env.GROQ_API_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
+}
 export function aiConfigured() {
-  return !!process.env.GROQ_API_KEY;
+  return !!apiKey();
 }
 export async function groqChat(input: { messages: ChatMessage[]; tools?: ToolSpec[]; temperature?: number; maxTokens?: number }) {
-  const key = process.env.GROQ_API_KEY;
+  const key = apiKey();
   if (!key) throw new Error('AI_NOT_CONFIGURED');
   let lastError = '';
   for (const [attempt, model] of [AI_MODEL, AI_MODEL, AI_FALLBACK_MODEL].entries()) {
@@ -33,7 +37,8 @@ export async function groqChat(input: { messages: ChatMessage[]; tools?: ToolSpe
       const data = (await response.json()) as { choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[] };
       return data.choices[0].message;
     }
-    lastError = `${response.status}`;
+    const detail = (await response.text().catch(() => '')).replace(/gsk_[A-Za-z0-9]+/g, '[key]').slice(0, 200);
+    lastError = `${response.status} ${detail}`;
     // Free tier: short per-minute limits. Wait briefly once if the API says so.
     const wait = Number(response.headers.get('retry-after') || 0);
     if (response.status === 429 && attempt === 0 && wait > 0 && wait <= 8) {

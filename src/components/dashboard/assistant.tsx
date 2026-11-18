@@ -8,7 +8,7 @@ import { answer, assistantExamples, type AssistantAnswer } from '@/lib/ai/assist
 import { useTutorial } from '../tutorial';
 import { api } from '@/lib/api-client';
 
-type Remote = { text: string; booking?: { serviceId?: string; staffId?: string; date?: string; time?: string; name?: string; phone?: string }; fallback?: boolean };
+type Remote = { text: string; booking?: { serviceId?: string; staffId?: string; date?: string; time?: string; name?: string; phone?: string }; fallback?: boolean; reason?: string; code?: string };
 /** Tiny, safe markdown: **bold**, lists, line breaks. */
 function Rich({ text }: { text: string }) {
   const lines = text.split(/\n+/).filter((l) => l.trim());
@@ -55,13 +55,19 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
         locale,
         messages: history.slice(-12).map((l) => ({ role: l.role === 'me' ? 'user' : 'assistant', content: l.text.slice(0, 4000) })),
       });
-      if (remote.fallback) throw new Error('fallback');
+      if (remote.fallback) throw new Error(remote.reason === 'unavailable' ? `smart:${remote.code || 'error'}` : 'fallback');
       const booking = remote.booking ? { ...remote.booking, understood: [], confidence: 1 } : undefined;
       setLines((l) => [...l, { role: 'ai', text: remote.text, smart: true, result: { text: remote.text, booking } }]);
-    } catch {
+    } catch (e) {
       // Offline or not configured: the local assistant answers instead.
       const result = answer(q, w, locale);
-      setLines((l) => [...l, { role: 'ai', text: result.text, result }]);
+      const code = e instanceof Error && e.message.startsWith('smart:') ? e.message.slice(6) : '';
+      const hint = code
+        ? de
+          ? `\n\n(Die smarte KI ist gerade nicht erreichbar – Code ${code}. Hier antwortet die Offline-KI.)`
+          : `\n\n(Smart AI unavailable – code ${code}. The offline assistant answered.)`
+        : '';
+      setLines((l) => [...l, { role: 'ai', text: result.text + hint, result }]);
     } finally {
       setThinking(false);
     }
