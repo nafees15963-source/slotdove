@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { CustomerChat } from './customer-chat';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Clock3 } from 'lucide-react';
@@ -168,6 +169,7 @@ export function PrivateLink({ invite = false }: { invite?: boolean }) {
                 </Button>
               </div>
             )}
+            {token && <CustomerChat token={token} business={booking.business_name} />}
           </>
         ) : busy ? (
           <p>{t.loading}</p>

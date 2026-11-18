@@ -111,6 +111,47 @@ try {
     await assert.rejects(user.query('update bookings set staff_id=null where id=$1',[booking.id]));
     await user.query('delete from bookings where id=$1',[booking.id]);
   });
+  await test('team can book walk-ins at any minute, outside hours, without email', async () => {
+    const walkIn = (await user.query("insert into customers(business_id,name) values($1,'Walk-in') returning id", [b1])).rows[0].id;
+    await db.query('update businesses set min_notice_minutes=600 where id=$1', [b1]);
+    // 7 minutes from now: violates notice and the 15-minute grid, still allowed internally.
+    const r = (await user.query("insert into bookings(business_id,service_id,staff_id,customer_id,starts_at) values($1,$2,$3,$4,date_trunc('minute',now())+interval '7 minutes') returning id,status", [b1, s, st, walkIn])).rows[0];
+    assert.equal(r.status, 'confirmed');
+    // Overlap protection still applies.
+    await assert.rejects(user.query("insert into bookings(business_id,service_id,staff_id,customer_id,starts_at) values($1,$2,$3,$4,date_trunc('minute',now())+interval '10 minutes')", [b1, s, st, walkIn]), /bookings_no_overlap|exclusion/);
+    await user.query("update bookings set status='cancelled' where id=$1", [r.id]);
+    await user.query('delete from bookings where id=$1', [r.id]);
+    await db.query('update businesses set min_notice_minutes=0 where id=$1', [b1]);
+  });
+  await test('week plan replacement is atomic and tenant scoped', async () => {
+    await user.query('select replace_week_plan($1,$2,$3)', [b1, st, JSON.stringify([{ weekday: 1, starts: '09:00', ends: '12:00' }, { weekday: 1, starts: '13:00', ends: '18:00' }])]);
+    assert.equal((await user.query('select * from availability_rules where staff_id=$1', [st])).rowCount, 2);
+    await db.query("insert into availability_rules(business_id,staff_id,weekday,starts,ends) select $1,$2,d,'08:00','18:00' from generate_series(0,6)d on conflict do nothing", [b1, st]);
+    await db.query("delete from availability_rules where staff_id=$1 and weekday=1 and starts in ('09:00','13:00')", [st]);
+    const other = await connect();
+    await other.query('set role authenticated');
+    await other.query("select set_config('request.jwt.claim.sub',$1,false)", [u2]);
+    await assert.rejects(other.query('select replace_week_plan($1,$2,$3)', [b1, st, '[]']), /FORBIDDEN/);
+  });
+  await test('chat, activity and reports are not readable by tenants directly', async () => {
+    for (const t of ['messages', 'conversations', 'message_reports', 'activity_log', 'admin_business_notes'])
+      await assert.rejects(user.query(`select * from ${t}`), /permission denied/);
+  });
+  await test('platform admin support session grants temporary owner access with audit', async () => {
+    const admin = (await db.query("insert into auth.users(id,email) values(gen_random_uuid(),'admin@example.test') returning id")).rows[0].id;
+    await db.query('insert into private.platform_admins(user_id) values($1)', [admin]);
+    const a = await connect();
+    await a.query('set role authenticated');
+    await a.query("select set_config('request.jwt.claim.sub',$1,false)", [admin]);
+    assert.equal((await a.query('select my_business_role($1) r', [b1])).rows[0].r, null);
+    await db.query('select admin_support_session($1,$2,true)', [admin, b1]);
+    assert.equal((await a.query('select my_business_role($1) r', [b1])).rows[0].r, 'owner');
+    assert.equal((await a.query('select my_support_business() b')).rows[0].b, b1);
+    await db.query('select admin_support_session($1,$2,false)', [admin, b1]);
+    assert.equal((await a.query('select my_business_role($1) r', [b1])).rows[0].r, null);
+    assert.equal((await db.query("select * from admin_audit_logs where action like 'support.%' and business_id=$1", [b1])).rowCount, 2);
+    await assert.rejects(user.query('select admin_support_session($1,$2,true)', [u1, b1]));
+  });
   await test('tenant isolation: owner A cannot read owner B customers', async () => {
     const r = await user.query('select * from customers where business_id=$1', [b2]);
     assert.equal(r.rowCount, 0);

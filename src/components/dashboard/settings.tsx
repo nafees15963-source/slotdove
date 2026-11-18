@@ -1,4 +1,8 @@
 'use client';
+import { InfoTip } from '../tutorial';
+import type { Visual } from '@/lib/tutorials';
+import { industries, industryById } from '@/lib/industries';
+import { computeInsights } from '@/lib/ai/insights';
 import { useState } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
 import { LogoUpload } from '../logo-upload';
@@ -11,7 +15,6 @@ import {
   Copy,
   ArrowUpRight,
   Globe2,
-  ShieldCheck,
   Mail,
   CalendarDays,
   Download,
@@ -37,7 +40,7 @@ export function Settings({ bookingOnly = false }: { bookingOnly?: boolean }) {
       await api(`/api/businesses/${b.id}/settings`, 'POST', {
         ...b,
         ...f,
-        auto_confirm: bookingOnly ? b.auto_confirm : f.auto_confirm === 'on',
+        auto_confirm: f.auto_confirm === 'on',
         published: f.published === 'on',
         notifications_enabled: bookingOnly
           ? b.notifications_enabled
@@ -54,9 +57,19 @@ export function Settings({ bookingOnly = false }: { bookingOnly?: boolean }) {
       setBusy(false);
     }
   }
+  const de = locale === 'de';
+  const tips: Record<string, [string, Visual]> = {
+    min_notice_minutes: [de ? 'Wie kurzfristig Kunden online buchen dürfen. 120 = frühestens 2 Stunden vorher. Du selbst kannst intern jederzeit Termine eintragen.' : 'How short-notice customers may book online. 120 = at least 2 hours ahead. You can always add appointments internally.', 'slot-grid'],
+    max_advance_days: [de ? 'Wie weit im Voraus online gebucht werden kann, z. B. 60 Tage.' : 'How far ahead customers can book, e.g. 60 days.', 'calendar'],
+    slot_interval: [de ? 'Abstand der angebotenen Uhrzeiten. 15 = 9:00, 9:15, 9:30 … Für deine eigenen Einträge gilt das nicht.' : 'Spacing of offered times. 15 = 9:00, 9:15, 9:30 … Does not apply to your own entries.', 'slot-grid'],
+    cancellation_hours: [de ? 'Bis wie viele Stunden vorher Kunden selbst absagen oder verschieben dürfen.' : 'Until how many hours before customers can cancel or move themselves.', 'calendar'],
+  };
   const field = (name: string, label: string, type: string, value: string | number) => (
     <div className="field">
-      <label htmlFor={name}>{label}</label>
+      <label htmlFor={name}>
+        {label}
+        {tips[name] && <InfoTip text={tips[name][0]} visual={tips[name][1]} />}
+      </label>
       <input
         name={name}
         id={name}
@@ -135,6 +148,16 @@ export function Settings({ bookingOnly = false }: { bookingOnly?: boolean }) {
                 <input id="address" name="address" defaultValue={b.address} />
               </div>
               <div className="field">
+                <label htmlFor="industry">{de ? 'Branche' : 'Industry'}</label>
+                <select id="industry" name="industry" defaultValue={industryById(b.industry).id}>
+                  {industries.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.emoji} {de ? i.de : i.en}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
                 <label htmlFor="locale">{t.language}</label>
                 <select id="locale" name="locale" defaultValue={b.locale}>
                   <option value="de">Deutsch</option>
@@ -156,15 +179,17 @@ export function Settings({ bookingOnly = false }: { bookingOnly?: boolean }) {
               <h3>{t.bookingSettings}</h3>
               <div className="form-grid">
                 {!bookingOnly && (
+                  <div className="field full">
+                    <label htmlFor="timezone">{t.timezone}</label>
+                    <select name="timezone" id="timezone" defaultValue={b.timezone}>
+                      {['UTC', ...Intl.supportedValuesOf('timeZone')].map((z) => (
+                        <option key={z}>{z}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {(
                   <>
-                    <div className="field full">
-                      <label htmlFor="timezone">{t.timezone}</label>
-                      <select name="timezone" id="timezone" defaultValue={b.timezone}>
-                        {['UTC', ...Intl.supportedValuesOf('timeZone')].map((z) => (
-                          <option key={z}>{z}</option>
-                        ))}
-                      </select>
-                    </div>
                     {field('min_notice_minutes', t.minNotice, 'number', b.min_notice_minutes)}
                     {field('max_advance_days', t.maxAdvance, 'number', b.max_advance_days)}
                     {field('slot_interval', t.interval, 'number', b.slot_interval)}
@@ -172,6 +197,7 @@ export function Settings({ bookingOnly = false }: { bookingOnly?: boolean }) {
                     <label className="check-label full">
                       <input name="auto_confirm" type="checkbox" defaultChecked={b.auto_confirm} />
                       {t.autoConfirm}
+                      <InfoTip text={de ? 'An: Online-Buchungen sind sofort fest. Aus: Du bestätigst jede Anfrage selbst.' : 'On: online bookings are confirmed instantly. Off: you confirm every request.'} visual="booking-form" />
                     </label>
                   </>
                 )}
@@ -335,6 +361,18 @@ export function Analytics() {
           </div>
         ))}
       </div>
+      {w.features.includes('assistant') && (
+        <div className="panel panel-body insights-card" style={{ marginTop: 24 }}>
+          <h3 className="panel-title">✨ {locale === 'de' ? 'KI-Einschätzung' : 'AI assessment'}</h3>
+          <div className="insight-list">
+            {computeInsights(w).map((i) => (
+              <div key={i.id} className={`insight ${i.tone}`}>
+                <span>{locale === 'de' ? i.de : i.en}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="split-settings" style={{ marginTop: 24 }}>
         <div className="panel">
           <div className="panel-head">
@@ -479,27 +517,43 @@ export function Integrations() {
 }
 export function Billing() {
   const w = useWorkspace(),
-    { t, locale } = useI18n();
+    { locale } = useI18n();
+  const de = locale === 'de';
+  const plans = [
+    { id: 'free', name: 'Starter', price: 5, items: de ? ['1 Kalender', 'Online-Buchungsseite', 'E-Mail-Erinnerungen', 'Chat'] : ['1 calendar', 'Online booking page', 'Email reminders', 'Chat'] },
+    { id: 'pro', name: 'Pro', price: 15, items: de ? ['Bis 5 Teammitglieder', 'Slotdove KI', 'Auswertungen', 'Alles aus Starter'] : ['Up to 5 team members', 'Slotdove AI', 'Analytics', 'Everything in Starter'] },
+    { id: 'business', name: 'Business', price: 25, items: de ? ['Bis 50 Teammitglieder', 'Mehrere Standorte', 'Bevorzugter Support', 'Alles aus Pro'] : ['Up to 50 team members', 'Multiple locations', 'Priority support', 'Everything in Pro'] },
+  ];
   return (
     <>
-      <Heading title={t.billing} description={t.prelaunch} />
-      <div className="panel panel-body content-narrow">
-        <div className="spread">
-          <div className="empty-icon">
-            <ShieldCheck size={25} />
+      <Heading title={de ? 'Dein Tarif' : 'Your plan'} description={de ? 'Einfache Preise, monatlich kündbar.' : 'Simple pricing, cancel monthly.'} />
+      <div className="plan-grid">
+        {plans.map((p) => (
+          <div key={p.id} className={`plan-card ${w.plan === p.id ? 'current' : ''} ${p.id === 'pro' ? 'featured' : ''}`}>
+            {w.plan === p.id && <span className="badge badge-green">{de ? 'Aktueller Tarif' : 'Current plan'}</span>}
+            <h3>{p.name}</h3>
+            <div className="plan-price">
+              <strong>{p.price} €</strong>
+              <span>/{de ? 'Monat' : 'month'}</span>
+            </div>
+            <ul>
+              {p.items.map((i) => (
+                <li key={i}>
+                  <Check size={14} /> {i}
+                </li>
+              ))}
+            </ul>
+            {w.plan !== p.id && (
+              <Link className="btn btn-outline" href="/dashboard/chat">
+                {de ? 'Wechsel anfragen' : 'Request switch'}
+              </Link>
+            )}
           </div>
-          <span className="badge badge-green">{t.active}</span>
-        </div>
-        <h2 style={{ fontSize: 30, margin: '18px 0' }}>
-          {w.plan.charAt(0).toUpperCase() + w.plan.slice(1)}
-        </h2>
-        <p style={{ maxWidth: 500 }}>{t.prelaunchText}</p>
-        <div className="notice" style={{ marginTop: 25 }}>
-          {locale === 'de'
-            ? 'Dein Zugang wird von der Plattformverwaltung vergeben. Es werden keine Zahlungen verarbeitet.'
-            : 'Your access is assigned by the platform administrator. No payments are processed.'}
-        </div>
+        ))}
       </div>
+      <p className="muted" style={{ marginTop: 18 }}>
+        {de ? 'Preise inkl. MwSt. Die Zahlungsabwicklung wird gerade eingerichtet – bis dahin vergibt das Slotdove-Team deinen Tarif.' : 'Prices incl. VAT. Payment processing is being set up – until then the Slotdove team assigns your plan.'}
+      </p>
     </>
   );
 }

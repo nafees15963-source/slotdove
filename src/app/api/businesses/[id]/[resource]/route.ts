@@ -2,7 +2,6 @@ import { exportRows } from '@/lib/export-data';
 import { sendEmail, invitationEmail } from '@/lib/email';
 import { z } from 'zod';
 import {
-  bookingSchema,
   customerSchema,
   hoursSchema,
   serviceSchema,
@@ -22,6 +21,23 @@ import {
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { csv } from '@/lib/utils';
 import { calendarFile } from '@/lib/scheduling/engine';
+import { logActivity } from '@/lib/activity';
+import { fromZonedTime } from 'date-fns-tz';
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+const internalBookingSchema = z.object({
+  service_id: z.uuid(),
+  staff_id: z.uuid().nullable(),
+  customer_id: z.uuid().optional(),
+  starts_at: z.iso.datetime({ offset: true }),
+  name: z.string().trim().min(2).max(100),
+  email: z
+    .union([z.email().max(254), z.literal('')])
+    .optional()
+    .transform((v) => (v ? v.toLowerCase() : null)),
+  phone: z.string().max(30).default(''),
+  notes: z.string().max(1000).default(''),
+  idempotency_key: z.uuid(),
+});
 type Context = { params: Promise<{ id: string; resource: string }> };
 const tables: Record<string, string> = {
   services: 'services',
@@ -40,6 +56,66 @@ export async function POST(request: Request, context: Context) {
     z.uuid().parse(id);
     const { db, user, role } = await requireBusiness(id, resource !== 'booking-status');
     const input = await body(request);
+    void logActivity(request, {
+      user_id: user.id,
+      business_id: id,
+      action: `${resource}.${input.id ? 'update' : 'create'}`,
+      details: { item: typeof input.id === 'string' ? input.id : undefined },
+    });
+    if (resource === 'week-plan-replace') {
+      const v = z
+        .object({
+          staff_ids: z.array(z.uuid()).min(1).max(100),
+          rules: z
+            .array(z.object({ weekday: z.number().int().min(0).max(6), starts: time, ends: time }).refine((r) => r.ends > r.starts))
+            .max(70),
+        })
+        .parse(input);
+      for (const staffId of v.staff_ids) {
+        const { error } = await db.rpc('replace_week_plan', { p_business: id, p_staff: staffId, p_rules: v.rules });
+        if (error) throw error;
+      }
+      return json({ ok: true });
+    }
+    if (resource === 'holidays') {
+      const v = z
+        .object({
+          staff_ids: z.array(z.uuid()).min(1).max(100),
+          days: z.array(z.object({ date: z.iso.date(), reason: z.string().max(200) })).min(1).max(60),
+        })
+        .parse(input);
+      const { data: business, error: be } = await db.from('businesses').select('timezone').eq('id', id).single();
+      if (be) throw be;
+      let created = 0,
+        skipped = 0;
+      for (const staffId of v.staff_ids)
+        for (const d of v.days) {
+          const next = new Date(d.date + 'T12:00:00Z');
+          next.setUTCDate(next.getUTCDate() + 1);
+          const { error } = await db.from('blocked_times').insert({
+            business_id: id,
+            staff_id: staffId,
+            starts_at: fromZonedTime(`${d.date}T00:00:00`, business.timezone).toISOString(),
+            ends_at: fromZonedTime(`${next.toISOString().slice(0, 10)}T00:00:00`, business.timezone).toISOString(),
+            reason: d.reason,
+          });
+          if (error) skipped++;
+          else created++;
+        }
+      return json({ created, skipped });
+    }
+    if (resource === 'blocks' && input.staff_id === 'all') {
+      const v = z
+        .object({ starts_at: z.iso.datetime({ offset: true }), ends_at: z.iso.datetime({ offset: true }), reason: z.string().max(200).default('') })
+        .refine((x) => x.ends_at > x.starts_at)
+        .parse(input);
+      const { data: staff, error: se } = await db.from('staff_profiles').select('id').eq('business_id', id).eq('active', true);
+      if (se) throw se;
+      if (!staff?.length) throw new HttpError(400, 'INVALID_INPUT');
+      const { error } = await db.from('blocked_times').insert(staff.map((s) => ({ ...v, staff_id: s.id, business_id: id })));
+      if (error) throw error;
+      return json({ ok: true });
+    }
     if (resource === 'anonymize-customer') {
       const customerId = z.uuid().parse(input.id);
       if (input.confirm !== true) throw new HttpError(400, 'CONFIRMATION_REQUIRED');
@@ -140,7 +216,7 @@ export async function POST(request: Request, context: Context) {
       return json({ ok: true });
     }
     if (resource === 'bookings') {
-      const fields = bookingSchema.extend({ staff_id: z.uuid().nullable() }).parse({ ...input, business_id: id });
+      const fields = internalBookingSchema.parse(input);
       const { data: existing, error: findError } = await db
         .from('bookings')
         .select('id')
@@ -149,20 +225,25 @@ export async function POST(request: Request, context: Context) {
         .maybeSingle();
       if (findError) throw findError;
       if (existing) return json(existing);
-      let { data: customer } = await db
-        .from('customers')
-        .select('id')
-        .eq('business_id', id)
-        .eq('email', fields.email)
-        .maybeSingle();
-      if (!customer) {
-        const { data, error } = await db
-          .from('customers')
-          .insert({ business_id: id, name: fields.name, email: fields.email, phone: fields.phone })
-          .select('id')
-          .single();
+      let customerId = fields.customer_id;
+      if (customerId) {
+        const { data, error } = await db.from('customers').select('id').eq('business_id', id).eq('id', customerId).maybeSingle();
         if (error) throw error;
-        customer = data;
+        if (!data) throw new HttpError(400, 'INVALID_INPUT');
+      } else {
+        const { data: match } = fields.email
+          ? await db.from('customers').select('id').eq('business_id', id).eq('email', fields.email).maybeSingle()
+          : await db.from('customers').select('id').eq('business_id', id).eq('name', fields.name).is('email', null).limit(1).maybeSingle();
+        if (match) customerId = match.id;
+        else {
+          const { data, error } = await db
+            .from('customers')
+            .insert({ business_id: id, name: fields.name, email: fields.email, phone: fields.phone })
+            .select('id')
+            .single();
+          if (error) throw error;
+          customerId = data.id;
+        }
       }
       const { data, error } = await db
         .from('bookings')
@@ -170,7 +251,7 @@ export async function POST(request: Request, context: Context) {
           business_id: id,
           service_id: fields.service_id,
           staff_id: fields.staff_id,
-          customer_id: customer!.id,
+          customer_id: customerId,
           starts_at: fields.starts_at,
           notes: fields.notes,
           idempotency_key: fields.idempotency_key,
@@ -252,8 +333,9 @@ export async function DELETE(request: Request, context: Context) {
   try {
     sameOrigin(request);
     const { id, resource } = await context.params;
-    const { db } = await requireBusiness(id);
+    const { db, user } = await requireBusiness(id);
     const item = z.uuid().parse(new URL(request.url).searchParams.get('item'));
+    void logActivity(request, { user_id: user.id, business_id: id, action: `${resource}.delete`, details: { item } });
     if (
       ![
         'customers',

@@ -15,7 +15,8 @@ export async function loadWorkspace(businessId?: string) {
     .select('business_id')
     .eq('user_id', user.id);
   if (membershipError) throw new Error('WORKSPACE_UNAVAILABLE');
-  const memberIds = (memberships || []).map((m) => m.business_id);
+  const { data: supportBusiness } = await db.rpc('my_support_business');
+  const memberIds = [...(memberships || []).map((m) => m.business_id), ...(supportBusiness ? [supportBusiness as string] : [])];
   const { data: businesses, error } = await db
     .from('businesses')
     .select('*')
@@ -23,8 +24,11 @@ export async function loadWorkspace(businessId?: string) {
     .order('created_at')
     .limit(100);
   if (error) throw new Error('WORKSPACE_UNAVAILABLE');
-  if (!businesses?.length) redirect('/onboarding');
-  const selected = businessId || (await cookies()).get('slotdove-business')?.value;
+  if (!businesses?.length) {
+    const { data: platformAdmin } = await db.rpc('my_platform_role');
+    redirect(platformAdmin ? '/admin' : '/onboarding');
+  }
+  const selected = businessId || (supportBusiness as string | null) || (await cookies()).get('slotdove-business')?.value;
   const business = (businesses.find((b) => b.id === selected) || businesses[0]) as Business;
   const { data: role } = await db.rpc('my_business_role', { bid: business.id });
   if (!role) throw new Error('WORKSPACE_SUSPENDED');
@@ -75,8 +79,20 @@ export async function loadWorkspace(businessId?: string) {
       p_to: monthBoundary(1),
     }),
     db.rpc('my_platform_role'),
+    db.from('feature_flags').select('key,stage').limit(200),
+    db.from('business_features').select('flag_key,enabled').eq('business_id', business.id).limit(200),
+    db
+      .from('announcements')
+      .select('id,business_id,title,body,level,created_at')
+      .or(`business_id.is.null,business_id.eq.${business.id}`)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
-  const err = queries.find((q) => q.error);
+  const err = queries.slice(0, 11).find((q) => q.error);
+  const overrides = new Map(((queries[12].data || []) as { flag_key: string; enabled: boolean }[]).map((f) => [f.flag_key, f.enabled]));
+  const features = ((queries[11].data || []) as { key: string; stage: string }[])
+    .filter((f) => overrides.get(f.key) ?? f.stage === 'all')
+    .map((f) => f.key);
   if (err) throw new Error('WORKSPACE_UNAVAILABLE');
   return {
     user: { id: user.id, email: user.email || '' },
@@ -95,6 +111,10 @@ export async function loadWorkspace(businessId?: string) {
       assignments: queries[7].data || [],
       plan: queries[8].data?.plan_id || 'free',
       stats: queries[9].data,
+      // Before the 2026-11-18 migration the flag tables do not exist yet.
+      features: queries[11].error ? ['assistant', 'chat', 'smart_slots'] : features,
+      announcements: queries[13].data || [],
+      support: !!supportBusiness && supportBusiness === business.id && business.owner_id !== user.id,
     } as Workspace,
   };
 }

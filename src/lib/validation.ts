@@ -18,7 +18,7 @@ export const businessSchema = z.object({
       'Reserved URL',
     ),
   description: z.string().max(1000).default(''),
-  industry: z.string().max(60).default('consulting'),
+  industry: z.string().max(60).default('other'),
   timezone,
   currency: z.enum(['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD', 'INR']),
   locale: z.enum(['de', 'en']),
@@ -42,9 +42,9 @@ export const serviceSchema = z.object({
 export const customerSchema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z
-    .email()
-    .max(254)
-    .transform((v) => v.toLowerCase()),
+    .union([z.email().max(254), z.literal('')])
+    .optional()
+    .transform((v) => (v ? v.toLowerCase() : null)),
   phone: z.string().max(30).default(''),
   notes: z.string().max(2000).default(''),
 });
@@ -81,6 +81,7 @@ export const settingsSchema = z.object({
   timezone,
   currency: z.enum(['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD', 'INR']),
   locale: z.enum(['de', 'en']),
+  industry: z.string().max(60).optional(),
   email: z.email(),
   phone: z.string().max(30),
   address: z.string().max(300),

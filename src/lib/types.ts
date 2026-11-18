@@ -49,7 +49,7 @@ export type Customer = {
   id: string;
   business_id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string;
   notes: string;
   created_at: string;
@@ -107,6 +107,9 @@ export type Workspace = {
   notifications: Notification[];
   assignments: { service_id: string; staff_id: string }[];
   plan: string;
+  features: string[];
+  announcements: Announcement[];
+  support: boolean;
   stats: {
     total: number;
     confirmed: number;
@@ -116,4 +119,12 @@ export type Workspace = {
     customers: number;
     popular: { name: string; count: number }[];
   };
+};
+export type Announcement = {
+  id: string;
+  business_id: string | null;
+  title: string;
+  body: string;
+  level: 'info' | 'success' | 'warning';
+  created_at: string;
 };

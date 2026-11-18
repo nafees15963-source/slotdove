@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
-import { Copy, Check, Clock3, Download } from 'lucide-react';
+import { Copy, Check, Clock3, Download, MessageCircle } from 'lucide-react';
 import { Dialog } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { useI18n } from '../providers';
@@ -12,6 +12,7 @@ import { api, friendlyError } from '@/lib/api-client';
 import { dateLabel } from '@/lib/utils';
 import type { Booking, Customer, Service, Staff } from '@/lib/types';
 import { Status } from './common';
+import { InfoTip } from '../tutorial';
 export type FormKind = 'service' | 'customer' | 'staff' | 'booking' | 'hours' | 'block' | 'invite';
 export function EntityForm({
   kind,
@@ -133,7 +134,18 @@ export function EntityForm({
     max?: number,
   ) => (
     <div className="field" key={name}>
-      <label htmlFor={`f-${name}`}>{label}</label>
+      <label htmlFor={`f-${name}`}>
+        {label}
+        {name === 'buffer_before' && (
+          <InfoTip visual="buffer" text={locale === 'de' ? 'Minuten, die VOR dem Termin frei bleiben, z. B. zum Vorbereiten. Kunden sehen das nicht.' : 'Minutes kept free BEFORE the appointment, e.g. to prepare.'} />
+        )}
+        {name === 'buffer_after' && (
+          <InfoTip visual="buffer" text={locale === 'de' ? 'Minuten NACH dem Termin, z. B. zum Aufräumen. Der nächste Termin beginnt frühestens danach.' : 'Minutes AFTER the appointment, e.g. to clean up.'} />
+        )}
+        {name === 'duration_minutes' && (
+          <InfoTip text={locale === 'de' ? 'Wie lange der Termin für den Kunden dauert.' : 'How long the appointment lasts for the customer.'} />
+        )}
+      </label>
       <input
         id={`f-${name}`}
         name={name}
@@ -219,7 +231,7 @@ export function EntityForm({
             )}
             {kind === 'customer' && (
               <>
-                {input('email', t.email, 'email', init?.email)}
+                {input('email', `${t.email} (optional)`, 'email', init?.email ?? undefined, false)}
                 {input('phone', t.phone, 'tel', init?.phone, false)}
                 <div className="field full">
                   <label htmlFor="notes">{t.internalNotes}</label>
@@ -473,6 +485,24 @@ export function BookingDetail({
                   {t.delete}
                 </Button>
               )}
+            {w.role !== 'staff' && w.features.includes('chat') && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={async () => {
+                  try {
+                    const r = await api<{ id: string }>('/api/chat', 'POST', { business: w.business.id, action: 'start-customer', booking: booking.id });
+                    router.push(`/dashboard/chat?c=${r.id}`);
+                  } catch (e) {
+                    toast.error(friendlyError(e, locale));
+                  }
+                }}
+              >
+                <MessageCircle size={13} />
+                {locale === 'de' ? 'Nachricht senden' : 'Send message'}
+              </Button>
+            )}
             <Button variant="outline" size="sm" asChild>
               <a href={`/api/businesses/${w.business.id}/calendar-export?item=${booking.id}`}>
                 <Download size={13} />

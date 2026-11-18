@@ -37,6 +37,7 @@ export async function GET(request: Request) {
         .single();
       if (be || !booking) throw new Error('BOOKING_MISSING');
       if (
+        !booking.customers.email ||
         booking.is_sample ||
         booking.businesses.is_demo ||
         !booking.businesses.notifications_enabled ||

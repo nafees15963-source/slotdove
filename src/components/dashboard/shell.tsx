@@ -1,9 +1,9 @@
 'use client';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
+  Sun,
   CalendarDays,
   CalendarCheck2,
   Users,
@@ -18,33 +18,61 @@ import {
   CreditCard,
   ChevronRight,
   ChevronsUpDown,
-  ArrowUpRight,
   Menu,
   LogOut,
   ShieldCheck,
+  MessageCircle,
+  Sparkles,
+  CircleHelp,
+  Plus,
   LifeBuoy,
+  X,
+  Megaphone,
+  FlaskConical,
 } from 'lucide-react';
 import { Brand } from '../brand';
 import { Preferences } from '../preferences';
 import { useI18n } from '../providers';
 import { api } from '@/lib/api-client';
 import type { Business, Workspace } from '@/lib/types';
-import type { Messages } from '@/lib/i18n/en';
 import { toast } from 'sonner';
 import { NavigationFeedback } from '../navigation-feedback';
-import { WorkspaceGuide } from './guide';
-import { PlanningAssistant } from './planning-assistant';
+import { TutorialProvider, useTutorial } from '../tutorial';
+import { BookingDialog, type BookingPrefill } from './booking-dialog';
+import { AssistantPanel } from './assistant';
+
 const WorkspaceContext = createContext<Workspace | null>(null);
 export function useWorkspace() {
   const w = useContext(WorkspaceContext);
   if (!w) throw new Error('Workspace missing');
   return w;
 }
+type UI = { openBooking: (prefill?: BookingPrefill) => void; openAssistant: () => void; userId: string };
+const UIContext = createContext<UI>({ openBooking: () => {}, openAssistant: () => {}, userId: '' });
+export const useWorkspaceUI = () => useContext(UIContext);
+
+const labels: Record<string, [string, string]> = {
+  overview: ['Heute', 'Today'],
+  calendar: ['Kalender', 'Calendar'],
+  appointments: ['Terminliste', 'Appointments'],
+  customers: ['Kunden', 'Customers'],
+  chat: ['Nachrichten', 'Messages'],
+  services: ['Leistungen', 'Services'],
+  staff: ['Team', 'Team'],
+  availability: ['Arbeitszeiten', 'Working hours'],
+  booking: ['Buchungsseite', 'Booking page'],
+  analytics: ['Auswertungen', 'Analytics'],
+  notifications: ['Erinnerungen', 'Reminders'],
+  integrations: ['Website & Kalender', 'Website & calendar'],
+  settings: ['Einstellungen', 'Settings'],
+  billing: ['Tarif', 'Plan'],
+};
 export const sections = [
-  ['overview', LayoutDashboard],
+  ['overview', Sun],
   ['calendar', CalendarDays],
   ['appointments', CalendarCheck2],
   ['customers', Users],
+  ['chat', MessageCircle],
   ['services', Scissors],
   ['staff', UserRound],
   ['availability', Clock3],
@@ -55,24 +83,73 @@ export const sections = [
   ['settings', Settings2],
   ['billing', CreditCard],
 ] as const;
-export function DashboardShell({
-  workspace,
-  businesses,
-  user,
-  isAdmin,
-  children,
-}: {
+const groups: { title: [string, string]; keys: string[] }[] = [
+  { title: ['Täglich', 'Daily'], keys: ['overview', 'calendar', 'appointments', 'customers', 'chat'] },
+  { title: ['Einrichten', 'Set up'], keys: ['services', 'staff', 'availability', 'booking'] },
+  { title: ['Mehr', 'More'], keys: ['analytics', 'notifications', 'integrations', 'settings', 'billing'] },
+];
+export const staffSections = ['overview', 'calendar', 'appointments', 'chat'];
+export function sectionLabel(key: string, locale: string) {
+  return (labels[key] || labels.overview)[locale === 'de' ? 0 : 1];
+}
+export function DashboardShell(props: {
   workspace: Workspace;
   businesses: Business[];
   user: { id: string; email: string };
   isAdmin: boolean;
   children: React.ReactNode;
 }) {
-  const { t } = useI18n(),
-    router = useRouter();
-  const [open, setOpen] = useState(false);
   const section = usePathname().split('/')[2] || 'overview';
-  const title = t[section as keyof Messages] || t.overview;
+  return (
+    <WorkspaceContext.Provider value={props.workspace}>
+      <TutorialProvider page={section}>
+        <ShellInner {...props} section={section} />
+      </TutorialProvider>
+    </WorkspaceContext.Provider>
+  );
+}
+function ShellInner({
+  workspace,
+  businesses,
+  user,
+  isAdmin,
+  children,
+  section,
+}: {
+  workspace: Workspace;
+  businesses: Business[];
+  user: { id: string; email: string };
+  isAdmin: boolean;
+  children: React.ReactNode;
+  section: string;
+}) {
+  const { t, locale } = useI18n(),
+    router = useRouter(),
+    tutorial = useTutorial();
+  const de = locale === 'de';
+  const [open, setOpen] = useState(false);
+  const [booking, setBooking] = useState<{ prefill?: BookingPrefill } | null>(null);
+  const [assistant, setAssistant] = useState(false);
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      setDismissed(JSON.parse(localStorage.getItem('slotdove-dismissed') || '[]'));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setAssistant(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const title = sectionLabel(section, locale);
+  const canManage = workspace.role !== 'staff';
   async function logout() {
     try {
       await api('/api/auth', 'POST', { action: 'logout' });
@@ -82,12 +159,12 @@ export function DashboardShell({
       toast.error(t.error);
     }
   }
+  const announcements = workspace.announcements.filter((a) => !dismissed.includes(a.id));
+  const ui: UI = { openBooking: (prefill) => setBooking({ prefill }), openAssistant: () => setAssistant(true), userId: user.id };
   return (
-    <WorkspaceContext.Provider value={workspace}>
+    <UIContext.Provider value={ui}>
       <div className="dashboard-shell">
-        {open && (
-          <button className="sidebar-scrim" aria-label={t.close} onClick={() => setOpen(false)} />
-        )}
+        {open && <button className="sidebar-scrim" aria-label={t.close} onClick={() => setOpen(false)} />}
         <aside className={`sidebar ${open ? 'open' : ''}`}>
           <Brand />
           <div className="workspace-switch">
@@ -95,7 +172,6 @@ export function DashboardShell({
             <select
               aria-label={t.businessName}
               value={workspace.business.id}
-              style={{ border: 0, padding: 0, minHeight: 25, fontSize: 11 }}
               onChange={(e) => {
                 document.cookie = `slotdove-business=${e.target.value};path=/;SameSite=Lax`;
                 router.refresh();
@@ -109,62 +185,61 @@ export function DashboardShell({
             </select>
             <ChevronsUpDown size={12} />
           </div>
-          <div className="nav-label">{t.overview}</div>
+          {canManage && (
+            <button className="btn btn-primary sidebar-cta" onClick={() => setBooking({})} data-tour="new-booking-side">
+              <Plus size={16} /> {de ? 'Neuer Termin' : 'New appointment'}
+            </button>
+          )}
           <nav className="side-nav">
-            {sections.map(([key, Icon], i) => (
-              <Link
-                key={key}
-                prefetch={true}
-                aria-current={section === key ? 'page' : undefined}
-                className={`nav-link ${section === key ? 'active' : ''}`}
-                style={i === 10 ? { marginTop: 14 } : undefined}
-                href={key === 'overview' ? '/dashboard' : `/dashboard/${key}`}
-                onClick={() => setOpen(false)}
-              >
-                <Icon size={16} strokeWidth={1.6} />
-                {t[key]}
-                <NavigationFeedback />
-                {key === 'booking' && <ArrowUpRight size={12} style={{ marginLeft: 'auto' }} />}
-              </Link>
-            ))}
+            {groups.map((g) => {
+              const keys = g.keys.filter((k) => canManage || staffSections.includes(k));
+              if (!keys.length) return null;
+              return (
+                <div key={g.title[0]} className="nav-group">
+                  <div className="nav-label">{g.title[de ? 0 : 1]}</div>
+                  {keys.map((key) => {
+                    const Icon = sections.find(([k]) => k === key)![1];
+                    return (
+                      <Link
+                        key={key}
+                        prefetch
+                        aria-current={section === key ? 'page' : undefined}
+                        className={`nav-link ${section === key ? 'active' : ''}`}
+                        href={key === 'overview' ? '/dashboard' : `/dashboard/${key}`}
+                        onClick={() => setOpen(false)}
+                      >
+                        <Icon size={17} strokeWidth={1.7} />
+                        {sectionLabel(key, locale)}
+                        <NavigationFeedback />
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </nav>
           <div className="sidebar-bottom">
             {isAdmin && (
-              <Link className="nav-link" href="/admin">
+              <Link className="nav-link admin-link" href="/admin">
                 <ShieldCheck size={16} />
-                {t.admin}
+                {de ? 'Admin-Konsole' : 'Admin console'}
               </Link>
             )}
-            <div className="help-box">
-              <div className="row">
-                <LifeBuoy size={14} />
-                {t.help}
-              </div>
-              <p>{t.helpText}</p>
-              <Link href="/#faq" className="purple">
-                {t.faq} <ArrowUpRight size={11} style={{ display: 'inline' }} />
-              </Link>
-            </div>
+            <button className="help-box" onClick={() => tutorial.start(section)}>
+              <LifeBuoy size={16} />
+              <span>
+                <strong>{de ? 'Hilfe zu dieser Seite' : 'Help for this page'}</strong>
+                <small>{de ? 'Kurzes Tutorial starten' : 'Start a short tutorial'}</small>
+              </span>
+            </button>
             <div className="user-chip">
               <span className="avatar">{user.email.slice(0, 2).toUpperCase()}</span>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {user.email.split('@')[0]}
-                </div>
-                <small style={{ fontSize: 9 }}>
-                  {
-                    t[
-                      workspace.role === 'owner'
-                        ? 'owner'
-                        : workspace.role === 'admin'
-                          ? 'adminRole'
-                          : 'staffRole'
-                    ]
-                  }
-                </small>
+                <div className="ellipsis">{user.email.split('@')[0]}</div>
+                <small>{workspace.support ? 'Support' : t[workspace.role === 'owner' ? 'owner' : workspace.role === 'admin' ? 'adminRole' : 'staffRole']}</small>
               </div>
               <button onClick={logout} className="btn btn-ghost btn-icon" aria-label={t.logout}>
-                <LogOut size={14} />
+                <LogOut size={15} />
               </button>
             </div>
           </div>
@@ -172,11 +247,7 @@ export function DashboardShell({
         <main className="app-main">
           <header className="topbar">
             <div className="row">
-              <button
-                onClick={() => setOpen(true)}
-                className="btn btn-ghost btn-icon mobile-menu"
-                aria-label="Menu"
-              >
+              <button onClick={() => setOpen(true)} className="btn btn-ghost btn-icon mobile-menu" aria-label="Menu">
                 <Menu size={18} />
               </button>
               <div className="breadcrumbs">
@@ -185,28 +256,71 @@ export function DashboardShell({
                 <strong>{title}</strong>
               </div>
             </div>
-            <div className="topbar-actions">
+            <div className="topbar-actions" data-tour="help">
               {workspace.business.is_demo && <span className="badge badge-amber">{t.demo}</span>}
+              {workspace.features.some((f) => ['insights_pro', 'new_calendar'].includes(f)) && (
+                <span className="badge badge-purple" title={de ? 'Du testest Beta-Funktionen' : 'You are testing beta features'}>
+                  <FlaskConical size={12} /> Beta
+                </span>
+              )}
+              {workspace.features.includes('assistant') && (
+                <button className="btn btn-ai btn-sm" onClick={() => setAssistant(true)} title="Ctrl/⌘ + K">
+                  <Sparkles size={15} />
+                  <span className="hide-sm">{de ? 'KI fragen' : 'Ask AI'}</span>
+                </button>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={() => tutorial.start(section)} aria-label={de ? 'Tutorial für diese Seite' : 'Tutorial for this page'}>
+                <CircleHelp size={17} />
+                <span className="hide-sm">{de ? 'Anleitung' : 'Guide'}</span>
+              </button>
               <Preferences />
-              <Link
-                href="/dashboard/notifications"
-                className="btn btn-ghost btn-icon"
-                aria-label={t.notifications}
-              >
-                <Bell size={17} />
-              </Link>
-              <span className="avatar" style={{ width: 30, height: 30, fontSize: 10 }}>
-                {user.email.slice(0, 2).toUpperCase()}
-              </span>
             </div>
           </header>
+          {workspace.support && (
+            <div className="support-banner">
+              <ShieldCheck size={16} />
+              {de ? `Supportmodus: Du bearbeitest „${workspace.business.name}“ als Plattform-Admin. Alle Änderungen werden protokolliert.` : `Support mode: you are editing “${workspace.business.name}” as platform admin. All changes are logged.`}
+              <Link href="/admin" className="btn btn-sm btn-outline">
+                {de ? 'Zurück zur Konsole' : 'Back to console'}
+              </Link>
+            </div>
+          )}
+          {announcements.map((a) => (
+            <div className={`announcement ${a.level}`} key={a.id}>
+              <Megaphone size={16} />
+              <div>
+                <strong>{a.title}</strong>
+                {a.body && <span> {a.body}</span>}
+              </div>
+              <button
+                className="btn btn-ghost btn-icon"
+                aria-label={t.close}
+                onClick={() => {
+                  const next = [...dismissed, a.id];
+                  setDismissed(next);
+                  try {
+                    localStorage.setItem('slotdove-dismissed', JSON.stringify(next));
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
           <div className="app-content page-fade" key={section}>
-            <WorkspaceGuide />
-            {section === 'overview' && <PlanningAssistant />}
             {children}
           </div>
         </main>
+        {canManage && (
+          <button className="fab" onClick={() => setBooking({})} aria-label={de ? 'Neuer Termin' : 'New appointment'}>
+            <Plus size={22} />
+          </button>
+        )}
       </div>
-    </WorkspaceContext.Provider>
+      {booking && <BookingDialog open onClose={() => setBooking(null)} prefill={booking.prefill} />}
+      <AssistantPanel open={assistant} onClose={() => setAssistant(false)} />
+    </UIContext.Provider>
   );
 }

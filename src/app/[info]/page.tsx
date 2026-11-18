@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
-import { MarketingNav, MarketingFooter, Landing } from '@/components/marketing';
+import { MarketingNav, MarketingFooter } from '@/components/marketing';
+import { Landing } from '@/components/landing';
 import { getLocale, getMessages } from '@/lib/i18n/server';
 import { infoContent } from '@/lib/i18n/info';
 export default async function Page({ params }: { params: Promise<{ info: string }> }) {

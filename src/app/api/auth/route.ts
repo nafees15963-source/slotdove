@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { supabaseServer } from '@/lib/supabase/server';
 import { body, failure, HttpError, json, sameOrigin } from '@/lib/http';
+import { logActivity } from '@/lib/activity';
 const schema = z.object({
   action: z.enum(['login', 'signup', 'reset', 'update', 'logout']),
   email: z.email().optional(),
@@ -14,17 +15,25 @@ export async function POST(request: Request) {
     const db = await supabaseServer();
     const site = new URL(request.url).origin;
     if (input.action === 'logout') {
+      const {
+        data: { user: current },
+      } = await db.auth.getUser();
+      await logActivity(request, { user_id: current?.id, action: 'auth.logout' });
       const { error } = await db.auth.signOut();
       if (error) throw error;
       return json({ ok: true });
     }
     if (input.action === 'login') {
       if (!input.email || !input.password) throw new HttpError(400, 'INVALID_INPUT');
-      const { error } = await db.auth.signInWithPassword({
+      const { data, error } = await db.auth.signInWithPassword({
         email: input.email,
         password: input.password,
       });
-      if (error) throw new HttpError(400, 'INVALID_CREDENTIALS');
+      if (error) {
+        await logActivity(request, { action: 'auth.login_failed', details: { email: input.email.toLowerCase() } });
+        throw new HttpError(400, 'INVALID_CREDENTIALS');
+      }
+      await logActivity(request, { user_id: data.user?.id, action: 'auth.login' });
       return json({ ok: true });
     }
     if (input.action === 'signup') {
@@ -38,6 +47,7 @@ export async function POST(request: Request) {
         },
       });
       if (error) throw new HttpError(400, 'SIGNUP_FAILED');
+      await logActivity(request, { action: 'auth.signup', details: { email: input.email.toLowerCase() } });
       return json({ ok: true });
     }
     if (input.action === 'reset') {
