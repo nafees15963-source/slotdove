@@ -131,7 +131,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
                       <GraduationCap size={13} /> {de ? 'Tutorial ansehen' : 'Watch tutorial'}
                     </button>
                   )}
-                  {line.result.links?.map((l) => (
+                  {line.result.links?.filter((l) => /^\/(?!\/)[\w\-/?=&#.%]*$/.test(l.href)).map((l) => (
                     <Link key={l.href + l.label} className="chip" href={l.href} onClick={onClose}>
                       {l.label} →
                     </Link>

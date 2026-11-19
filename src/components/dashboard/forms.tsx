@@ -212,7 +212,7 @@ export function EntityForm({
                   0,
                   100000,
                 )}
-                {input('color', t.color, 'color', init?.color ?? '#7460db')}
+                {input('color', t.color, 'color', init?.color ?? '#0d7f79')}
                 {input('buffer_before', t.before, 'number', init?.buffer_before ?? 0, true, 0, 120)}
                 {input('buffer_after', t.after, 'number', init?.buffer_after ?? 0, true, 0, 120)}
                 <div className="field full">

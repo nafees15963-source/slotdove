@@ -5,9 +5,9 @@ export function Brand({ compact = false }: { compact?: boolean }) {
       <svg width="34" height="34" viewBox="0 0 44 44" fill="none" aria-hidden="true">
         <defs>
           <linearGradient id="brand-a" x1="3" x2="38" y1="3" y2="38" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#9b62ff" />
-            <stop offset=".48" stopColor="#6438ee" />
-            <stop offset="1" stopColor="#388bff" />
+            <stop stopColor="#35c6b5" />
+            <stop offset=".48" stopColor="#0d7f79" />
+            <stop offset="1" stopColor="#0b3b40" />
           </linearGradient>
         </defs>
         <path

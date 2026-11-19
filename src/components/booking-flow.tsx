@@ -180,7 +180,7 @@ export function BookingFlow({ slug }: { slug: string }) {
   ].filter((g) => g.list.length);
   const staffFor = (sid: string) => catalog?.assignments.filter((a) => a.service_id === sid).map((a) => catalog.staff.find((st) => st.id === a.staff_id)).filter(Boolean) as { id: string; name: string }[];
   const time = (iso: string) => new Intl.DateTimeFormat(locale, { timeStyle: 'short', timeZone: b?.timezone }).format(new Date(iso));
-  const accent = b?.brand_color || '#6a46f5';
+  const accent = b?.brand_color || '#0d7f79';
   const validDetails = details.name.trim().length >= 2 && /.+@.+\..+/.test(details.email) && details.consent;
   return (
     <div className="bk" style={{ ['--accent' as string]: accent }}>

@@ -16,6 +16,9 @@ import { ensureConversation, postMessage } from '@/lib/chat';
 import { logActivity } from '@/lib/activity';
 import { notifyTicketReply, processQueue, registerAppUrl, sendSoon } from '@/lib/notifications';
 import { emailConfigured, normalizeFrom, noticeEmail, sendEmail } from '@/lib/email';
+import { line, text } from '@/lib/sanitize';
+import { csv } from '@/lib/utils';
+import { checkEnv } from '@/lib/env';
 import { aiConfigured, groqChat } from '@/lib/groq';
 const plan = z.enum(['free', 'pro', 'business']);
 export async function GET(request: Request) {
@@ -27,6 +30,35 @@ export async function GET(request: Request) {
       businessId = url.searchParams.get('business'),
       conversationId = url.searchParams.get('conversation'),
       ticketId = url.searchParams.get('ticket');
+    if (url.searchParams.has('waitlist')) {
+      const { data, error } = await db.from('waitlist').select('*').order('created_at', { ascending: false }).limit(2000);
+      if (error) throw error;
+      if (url.searchParams.get('waitlist') === 'csv')
+        return new Response(
+          csv(
+            (data || []).map((w) => ({
+              Firma: w.company,
+              Ansprechpartner: w.contact_name,
+              EMail: w.email,
+              Telefon: w.phone,
+              Branche: w.industry,
+              Ort: w.city,
+              Teamgroesse: w.team_size,
+              Tarif: w.plan_interest,
+              Interesse: w.interest,
+              Status: w.status,
+              Nachricht: w.message,
+              Notizen: w.admin_notes,
+              Demo_bis: w.demo_until || '',
+              Eingetragen: w.created_at,
+              Einwilligung: w.consent_text,
+            })),
+          ),
+          { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="slotdove-warteliste.csv"', 'Cache-Control': 'private, no-store' } },
+        );
+      return json({ entries: data || [] });
+    }
+    if (url.searchParams.get('system') === '1') return json({ env: checkEnv() });
     if (url.searchParams.get('email') === 'status') {
       await registerAppUrl(request);
       const { data: stats } = await db.rpc('email_queue_stats');
@@ -124,7 +156,7 @@ export async function GET(request: Request) {
       return json({ messages: data });
     }
     const since = new Date(Date.now() - 14 * 86400000).toISOString();
-    const [businesses, stats, audit, accounts, notifications, reports, flags, overrides, announcements, activity, flaggedMessages, support, messageCount, tickets] = await Promise.all([
+    const [businesses, stats, audit, accounts, notifications, reports, flags, overrides, announcements, activity, flaggedMessages, support, messageCount, tickets, waitlistNew] = await Promise.all([
       db
         .from('businesses')
         .select('id,name,slug,email,owner_id,industry,status,is_demo,demo_expires_at,created_at,published,business_entitlements(plan_id)')
@@ -156,6 +188,7 @@ export async function GET(request: Request) {
         .select('id,case_number,business_id,user_id,contact_email,subject,category,priority,status,assigned_to,last_reply_by,created_at,updated_at')
         .order('updated_at', { ascending: false })
         .limit(500),
+      db.from('waitlist').select('id', { count: 'exact', head: true }).eq('status', 'new'),
     ]);
     if (businesses.error || stats.error || audit.error || accounts.error || notifications.error)
       throw businesses.error || stats.error || audit.error || accounts.error || notifications.error;
@@ -189,6 +222,7 @@ export async function GET(request: Request) {
       announcements: announcements.data || [],
       activity: rows.slice(0, 200),
       risks: scoreUsers(rows, users, flaggedBy),
+      waitlistNew: waitlistNew.count || 0,
       support: support.data || [],
       tickets: tickets.data || [],
     });
@@ -258,7 +292,7 @@ export async function POST(request: Request) {
             id: z.uuid(),
             fields: z
               .object({
-                name: z.string().trim().min(2).max(100),
+                name: line(2, 100),
                 slug: z.string().regex(/^[a-z][a-z0-9-]{2,49}$/),
                 email: z.email(),
                 phone: z.string().max(30),
@@ -354,7 +388,7 @@ export async function POST(request: Request) {
         break;
       }
       case 'support-reply': {
-        const v = z.object({ business_id: z.uuid(), text: z.string().trim().min(1).max(4000) }).parse(input);
+        const v = z.object({ business_id: z.uuid(), text: text(4000).pipe(z.string().min(1)) }).parse(input);
         const conversation = await ensureConversation(db, v.business_id, 'support');
         result = { message: await postMessage(db, conversation, { kind: 'admin', id: user.id, name: 'Slotdove Support' }, v.text) };
         break;
@@ -434,6 +468,78 @@ export async function POST(request: Request) {
           ],
         });
         result = { suggestion: reply.content || '' };
+        break;
+      }
+      case 'waitlist-update': {
+        const v = z
+          .object({
+            id: z.uuid(),
+            status: z.enum(['new', 'contacted', 'demo', 'customer', 'declined']).optional(),
+            plan_interest: z.enum(['free', 'pro', 'business', 'unsure']).optional(),
+            admin_notes: text(4000).optional(),
+          })
+          .parse(input);
+        const { id, ...patch } = v;
+        const { error } = await db
+          .from('waitlist')
+          .update({ ...patch, updated_at: new Date().toISOString(), ...(patch.status === 'contacted' ? { contacted_at: new Date().toISOString() } : {}) })
+          .eq('id', id);
+        if (error) throw error;
+        break;
+      }
+      case 'waitlist-delete': {
+        const { error } = await db.from('waitlist').delete().eq('id', z.uuid().parse(input.id));
+        if (error) throw error;
+        await audit('waitlist.deleted', null, { id: input.id });
+        break;
+      }
+      case 'waitlist-email': {
+        const v = z.object({ id: z.uuid(), subject: line(2, 140), message: text(5000).pipe(z.string().min(5)) }).parse(input);
+        const { data: lead } = await db.from('waitlist').select('email,locale,status').eq('id', v.id).single();
+        if (!lead) throw new HttpError(404, 'NOT_FOUND');
+        if (!emailConfigured()) throw new HttpError(400, 'EMAIL_NOT_CONFIGURED');
+        await sendEmail({ ...noticeEmail({ locale: lead.locale, title: v.subject, lines: v.message.split(/\n+/) }), to: lead.email, idempotencyKey: `wl-${v.id}-${Date.now()}` });
+        await db.from('waitlist').update({ status: lead.status === 'new' ? 'contacted' : lead.status, contacted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', v.id);
+        await audit('waitlist.emailed', null, { id: v.id });
+        break;
+      }
+      case 'waitlist-demo': {
+        // Starts a 14-day demo: invite by email, or activate the plan if the lead already registered.
+        const v = z.object({ id: z.uuid(), plan, days: z.number().int().min(1).max(90).default(14) }).parse(input);
+        const { data: lead } = await db.from('waitlist').select('*').eq('id', v.id).single();
+        if (!lead) throw new HttpError(404, 'NOT_FOUND');
+        const until = new Date(Date.now() + v.days * 86400000).toISOString();
+        const origin = process.env.NEXT_PUBLIC_SITE_URL?.startsWith('http') ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '') : new URL(request.url).origin;
+        let activated = false;
+        const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const account = list?.users.find((u) => u.email?.toLowerCase() === lead.email);
+        if (account) {
+          const { data: owned } = await db.from('businesses').select('id,status').eq('owner_id', account.id).limit(1).maybeSingle();
+          if (owned) {
+            const { error } = await db.rpc('admin_update_business', { p_id: owned.id, p_status: 'active', p_plan: v.plan, p_actor: user.id });
+            if (error) throw error;
+            activated = true;
+          }
+        }
+        if (emailConfigured()) {
+          const de = lead.locale === 'de';
+          const planName = { free: 'Starter', pro: 'Pro', business: 'Business' }[v.plan];
+          await sendEmail({
+            ...noticeEmail({
+              locale: lead.locale,
+              title: de ? `Ihr kostenloser Slotdove-Test (${planName}, ${v.days} Tage)` : `Your free Slotdove trial (${planName}, ${v.days} days)`,
+              lines: de
+                ? [`Hallo ${lead.contact_name},`, activated ? `Ihr Konto für ${lead.company} ist jetzt für ${v.days} Tage im Tarif ${planName} freigeschaltet – kostenlos und unverbindlich.` : `Ihr Testzugang für ${lead.company} ist bereit: ${v.days} Tage Slotdove im Tarif ${planName}, kostenlos und unverbindlich. Registrieren Sie sich bitte mit dieser E-Mail-Adresse – wir schalten Ihren Tarif dann sofort frei.`, 'Die Testphase endet automatisch. Bei Fragen antworten Sie einfach auf diese E-Mail.']
+                : [`Hello ${lead.contact_name},`, activated ? `Your account for ${lead.company} is now on the ${planName} plan for ${v.days} days – free of charge.` : `Your trial for ${lead.company} is ready: ${v.days} days of Slotdove ${planName}, free. Please sign up with this email address and we will unlock your plan right away.`, 'The trial ends automatically. Questions? Just reply.'],
+              cta: { label: activated ? (de ? 'Zu Slotdove' : 'Open Slotdove') : de ? 'Jetzt registrieren' : 'Sign up now', url: `${origin}${activated ? '/dashboard' : '/signup'}` },
+            }),
+            to: lead.email,
+            idempotencyKey: `wl-demo-${v.id}-${until.slice(0, 10)}`,
+          });
+        }
+        await db.from('waitlist').update({ status: 'demo', plan_interest: v.plan, demo_until: until, contacted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', v.id);
+        await audit('waitlist.demo', null, { id: v.id, plan: v.plan, days: v.days, activated });
+        result = { ok: true, activated, emailed: emailConfigured() };
         break;
       }
       case 'email-test': {

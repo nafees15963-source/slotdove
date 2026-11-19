@@ -18,7 +18,7 @@ export const previewBusiness: Business = {
   email: 'hallo@example.com',
   phone: '',
   address: 'Musterstraße 1, Berlin',
-  brand_color: '#6d4aff',
+  brand_color: '#0d7f79',
   published: false,
   status: 'active',
   is_demo: false,
@@ -60,8 +60,8 @@ export const previewWorkspace: Workspace = {
   business: previewBusiness,
   role: 'owner',
   services: [
-    { id: s1, business_id: b, name: 'Haarschnitt', description: 'Waschen, Schneiden, Föhnen', duration_minutes: 45, price_cents: 3500, buffer_before: 0, buffer_after: 10, color: '#6d4aff', active: true },
-    { id: s2, business_id: b, name: 'Färben', description: '', duration_minutes: 90, price_cents: 6500, buffer_before: 0, buffer_after: 15, color: '#f97362', active: true },
+    { id: s1, business_id: b, name: 'Haarschnitt', description: 'Waschen, Schneiden, Föhnen', duration_minutes: 45, price_cents: 3500, buffer_before: 0, buffer_after: 10, color: '#0d7f79', active: true },
+    { id: s2, business_id: b, name: 'Färben', description: '', duration_minutes: 90, price_cents: 6500, buffer_before: 0, buffer_after: 15, color: '#f2994a', active: true },
   ],
   staff: [
     { id: st1, business_id: b, name: 'Lena', user_id: null, active: true },

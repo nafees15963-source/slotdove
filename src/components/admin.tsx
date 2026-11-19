@@ -15,6 +15,9 @@ import {
   Flag,
   FlaskConical,
   LayoutDashboard,
+  ListChecks,
+  Download,
+  Phone,
   Mail,
   CheckCircle2,
   XCircle,
@@ -86,11 +89,13 @@ type AdminData = {
   activity: ActivityRow[];
   risks: { user_id: string; score: number; reasons: string[] }[];
   support: { id: string; business_id: string; last_message_at: string }[];
+  waitlistNew?: number;
   tickets: AdminTicket[];
 };
 type AdminTicket = { id: string; case_number: string; business_id: string | null; user_id: string | null; contact_email: string; subject: string; category: string; priority: string; status: TicketStatus; assigned_to: string | null; last_reply_by: string; created_at: string; updated_at: string };
-type Tab = 'overview' | 'support' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
+type Tab = 'overview' | 'support' | 'waitlist' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
 const bannedNow = (until: string | null | undefined) => !!until && Date.parse(until) > Date.now();
+const inPast = (date: string | null | undefined) => !!date && Date.parse(date) <= Date.now();
 const fmt = (iso: string | null | undefined, locale: string) =>
   iso ? new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso)) : '—';
 const actionLabel = (a: string) =>
@@ -170,8 +175,9 @@ function AdminConsole() {
     ['businesses', Building2, de ? 'Unternehmen' : 'Businesses', data?.businesses.length],
     ['users', Users, de ? 'Benutzer' : 'Users', data?.risks.filter((r) => r.score >= 0.5).length || undefined],
     ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined],
+    ['waitlist', ListChecks, de ? 'Warteliste' : 'Waitlist', data?.waitlistNew || undefined],
     ['features', FlaskConical, de ? 'Beta & Funktionen' : 'Beta & features'],
-    ['email', Mail, de ? 'E-Mail-Versand' : 'Email delivery'],
+    ['email', Mail, de ? 'System & E-Mail' : 'System & email'],
     ['announcements', Megaphone, de ? 'Mitteilungen' : 'Announcements'],
     ['logs', ScrollText, de ? 'Protokolle' : 'Logs'],
   ];
@@ -312,7 +318,13 @@ function AdminConsole() {
           </>
         )}
         {data && tab === 'support' && <SupportPanel data={data} action={action} nameOf={nameOf} emailOf={emailOf} onBusiness={setBusiness} />}
-        {data && tab === 'email' && <EmailStatus action={action} />}
+        {data && tab === 'waitlist' && <Waitlist action={action} />}
+        {data && tab === 'email' && (
+          <>
+            <SystemCheck />
+            <EmailStatus action={action} />
+          </>
+        )}
         {data && tab === 'businesses' && <BusinessTable data={data} emailOf={emailOf} onOpen={setBusiness} />}
         {data && tab === 'users' && <UserTable data={data} onOpen={setUser} />}
         {data && tab === 'moderation' && <Moderation data={data} action={action} nameOf={nameOf} />}
@@ -1631,5 +1643,310 @@ function EmailStatus({ action }: { action: ActionFn }) {
         </small>
       </section>
     </div>
+  );
+}
+
+type Lead = {
+  id: string;
+  company: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  industry: string;
+  city: string;
+  team_size: string;
+  plan_interest: 'free' | 'pro' | 'business' | 'unsure';
+  interest: 'demo' | 'subscription' | 'info';
+  message: string;
+  status: 'new' | 'contacted' | 'demo' | 'customer' | 'declined';
+  admin_notes: string;
+  demo_until: string | null;
+  contacted_at: string | null;
+  consent_text: string;
+  source: string;
+  created_at: string;
+};
+const leadStatus: Record<Lead['status'], [string, string, string]> = {
+  new: ['Neu', 'New', 'badge-purple'],
+  contacted: ['Kontaktiert', 'Contacted', 'badge-amber'],
+  demo: ['Demo läuft', 'Trial running', 'badge-green'],
+  customer: ['Kunde', 'Customer', 'badge-green'],
+  declined: ['Abgesagt', 'Declined', 'badge-red'],
+};
+const planLabel: Record<Lead['plan_interest'], string> = { free: 'Starter 5 €', pro: 'Pro 15 €', business: 'Business 25 €', unsure: 'unsicher' };
+const interestLabel: Record<Lead['interest'], [string, string]> = { demo: ['14-Tage-Demo', '14-day trial'], subscription: ['Abo nach Start', 'Subscription'], info: ['Nur Infos', 'Info only'] };
+function Waitlist({ action }: { action: ActionFn }) {
+  const { locale } = useI18n();
+  const de = locale === 'de';
+  const [leads, setLeads] = useState<Lead[] | null>(null);
+  const [filter, setFilter] = useState<'all' | Lead['status']>('all');
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState<Lead | null>(null);
+  const load = useCallback(async () => {
+    try {
+      const r = await api<{ entries: Lead[] }>('/api/admin?waitlist=1');
+      setLeads(r.entries);
+      setOpen((o) => (o ? r.entries.find((x) => x.id === o.id) || null : null));
+    } catch (e) {
+      toast.error(friendlyError(e, locale));
+    }
+  }, [locale]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (!leads) return <div className="skeleton-grid">{Array.from({ length: 3 }, (_, i) => <div className="skeleton" key={i} />)}</div>;
+  const rows = leads.filter((l) => (filter === 'all' || l.status === filter) && `${l.company} ${l.contact_name} ${l.email} ${l.city}`.toLowerCase().includes(q.toLowerCase()));
+  const count = (s: Lead['status']) => leads.filter((l) => l.status === s).length;
+  const expired = (l: Lead) => l.status === 'demo' && inPast(l.demo_until);
+  return (
+    <div className="stack">
+      <div className="kpi-row six">
+        {[
+          [de ? 'Gesamt' : 'Total', leads.length],
+          [de ? 'Neu' : 'New', count('new')],
+          [de ? 'Kontaktiert' : 'Contacted', count('contacted')],
+          [de ? 'Demo läuft' : 'Trials', count('demo')],
+          [de ? 'Kunden' : 'Customers', count('customer')],
+          [de ? 'Abo-Interesse' : 'Want subscription', leads.filter((l) => l.interest === 'subscription').length],
+        ].map(([l, v]) => (
+          <div className="kpi" key={String(l)}>
+            <small>{l}</small>
+            <strong>{v}</strong>
+          </div>
+        ))}
+      </div>
+      <section className="panel">
+        <div className="panel-head wrap">
+          <div className="row wrap">
+            <div className="search">
+              <Search size={15} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={de ? 'Firma, Name, E-Mail, Ort …' : 'Company, name, email, city …'} />
+            </div>
+            <div className="tabs">
+              {(['all', 'new', 'contacted', 'demo', 'customer', 'declined'] as const).map((f) => (
+                <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+                  {f === 'all' ? (de ? 'Alle' : 'All') : leadStatus[f][de ? 0 : 1]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* A file download, not a page: a plain link is correct here. */}
+          <a className="btn btn-outline btn-sm" href="/api/admin?waitlist=csv" download>
+            <Download size={14} /> CSV
+          </a>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{de ? 'Firma' : 'Company'}</th>
+                <th>{de ? 'Kontakt' : 'Contact'}</th>
+                <th>{de ? 'Wunsch' : 'Wants'}</th>
+                <th>Status</th>
+                <th>{de ? 'Eingetragen' : 'Joined'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((l) => (
+                <tr key={l.id} className="clickable" onClick={() => setOpen(l)}>
+                  <td>
+                    <div className="row">
+                      <span className="avatar">{industryById(l.industry).emoji}</span>
+                      <span>
+                        <strong>{l.company}</strong>
+                        <small className="block">{[industryById(l.industry)[de ? 'de' : 'en'], l.city].filter(Boolean).join(' · ')}</small>
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    {l.contact_name}
+                    <small className="block">{l.email}</small>
+                  </td>
+                  <td>
+                    {interestLabel[l.interest][de ? 0 : 1]}
+                    <small className="block">{planLabel[l.plan_interest]}</small>
+                  </td>
+                  <td>
+                    <span className={`badge ${leadStatus[l.status][2]}`}>{leadStatus[l.status][de ? 0 : 1]}</span>
+                    {expired(l) && <span className="badge badge-red">{de ? 'Demo abgelaufen' : 'Trial ended'}</span>}
+                  </td>
+                  <td>{fmt(l.created_at, locale)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!rows.length && (
+            <p className="panel-body muted">
+              {leads.length ? (de ? 'Keine Treffer.' : 'No matches.') : de ? 'Noch keine Einträge. Die Warteliste steht auf der Startseite unter „Frühzugang“.' : 'No entries yet. The waitlist form is on the landing page.'}
+            </p>
+          )}
+        </div>
+      </section>
+      {open && <LeadDrawer lead={open} onClose={() => setOpen(null)} action={action} reload={load} />}
+    </div>
+  );
+}
+function LeadDrawer({ lead, onClose, action, reload }: { lead: Lead; onClose: () => void; action: ActionFn; reload: () => Promise<void> }) {
+  const { locale } = useI18n();
+  const de = locale === 'de';
+  const [notes, setNotes] = useState(lead.admin_notes);
+  const [plan, setPlan] = useState<'free' | 'pro' | 'business'>(lead.plan_interest === 'unsure' ? 'pro' : lead.plan_interest);
+  const [days, setDays] = useState(14);
+  const [subject, setSubject] = useState(de ? 'Ihr Interesse an Slotdove' : 'Your interest in Slotdove');
+  const [message, setMessage] = useState(
+    de
+      ? `Sehr geehrte/r ${lead.contact_name},\n\nvielen Dank für Ihr Interesse an Slotdove für ${lead.company}.\n\n…\n\nMit freundlichen Grüßen\nIhr Slotdove-Team`
+      : `Dear ${lead.contact_name},\n\nthank you for your interest in Slotdove for ${lead.company}.\n\n…\n\nKind regards\nThe Slotdove team`,
+  );
+  const run = async (p: Record<string, unknown>, ok?: string) => {
+    const r = await action(p, ok);
+    await reload();
+    return r;
+  };
+  return (
+    <div className="drawer-layer">
+      <button className="drawer-scrim" onClick={onClose} aria-label={de ? 'Schließen' : 'Close'} />
+      <aside className="drawer">
+        <header className="drawer-head">
+          <div>
+            <h2>{lead.company}</h2>
+            <small className="muted">
+              {industryById(lead.industry).emoji} {industryById(lead.industry)[de ? 'de' : 'en']}
+              {lead.city && ` · ${lead.city}`}
+              {lead.team_size && ` · ${lead.team_size} ${de ? 'Personen' : 'people'}`} · {fmt(lead.created_at, locale)}
+            </small>
+          </div>
+          <button className="btn btn-ghost btn-icon" onClick={onClose} aria-label={de ? 'Schließen' : 'Close'}>
+            <X size={18} />
+          </button>
+        </header>
+        <div className="drawer-body">
+          <div className="lead-contact">
+            <strong>{lead.contact_name}</strong>
+            <a href={`mailto:${lead.email}`}>{lead.email}</a>
+            {lead.phone && (
+              <a href={`tel:${lead.phone.replace(/[^0-9+]/g, '')}`}>
+                <Phone size={13} /> {lead.phone}
+              </a>
+            )}
+          </div>
+          <div className="row wrap">
+            <span className={`badge ${leadStatus[lead.status][2]}`}>{leadStatus[lead.status][de ? 0 : 1]}</span>
+            <span className="badge">{interestLabel[lead.interest][de ? 0 : 1]}</span>
+            <span className="badge">{planLabel[lead.plan_interest]}</span>
+            {lead.demo_until && (
+              <span className="badge badge-amber">
+                {de ? 'Demo bis' : 'Trial until'} {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(lead.demo_until))}
+              </span>
+            )}
+          </div>
+          {lead.message && <blockquote className="lead-message">{lead.message}</blockquote>}
+          <label className="inline-field">
+            Status
+            <select value={lead.status} onChange={(e) => run({ action: 'waitlist-update', id: lead.id, status: e.target.value })}>
+              {(Object.keys(leadStatus) as Lead['status'][]).map((s) => (
+                <option key={s} value={s}>
+                  {leadStatus[s][de ? 0 : 1]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <section className="lead-box">
+            <strong>{de ? 'Kostenlose Demo starten' : 'Start free trial'}</strong>
+            <small className="muted">
+              {de
+                ? 'Schickt eine E-Mail mit Registrierungslink. Hat sich die Firma schon mit dieser E-Mail registriert, wird der Tarif sofort freigeschaltet.'
+                : 'Sends an email with a sign-up link. If the company already registered with this email, the plan is activated immediately.'}
+            </small>
+            <div className="row wrap">
+              <select value={plan} onChange={(e) => setPlan(e.target.value as typeof plan)}>
+                <option value="free">Starter (5 €)</option>
+                <option value="pro">Pro (15 €)</option>
+                <option value="business">Business (25 €)</option>
+              </select>
+              <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
+                {[7, 14, 30].map((d) => (
+                  <option key={d} value={d}>
+                    {d} {de ? 'Tage' : 'days'}
+                  </option>
+                ))}
+              </select>
+              <Button
+                onClick={async () => {
+                  const r = await run({ action: 'waitlist-demo', id: lead.id, plan, days }, de ? 'Demo gestartet' : 'Trial started');
+                  if (r && !r.emailed) toast.message(de ? 'Hinweis: E-Mail-Versand ist nicht eingerichtet – bitte selbst Bescheid geben.' : 'Note: email delivery is not set up.');
+                }}
+              >
+                {de ? 'Demo starten' : 'Start trial'}
+              </Button>
+            </div>
+          </section>
+          <section className="lead-box">
+            <strong>{de ? 'E-Mail schreiben' : 'Write email'}</strong>
+            <input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={140} aria-label={de ? 'Betreff' : 'Subject'} />
+            <textarea rows={7} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={5000} aria-label={de ? 'Nachricht' : 'Message'} />
+            <Button variant="outline" onClick={() => run({ action: 'waitlist-email', id: lead.id, subject, message }, de ? 'E-Mail gesendet' : 'Email sent')}>
+              <Send size={14} /> {de ? 'Senden' : 'Send'}
+            </Button>
+          </section>
+          <div className="field">
+            <label htmlFor="lead-notes">{de ? 'Interne Notizen' : 'Internal notes'}</label>
+            <textarea id="lead-notes" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} />
+            <Button variant="outline" size="sm" style={{ marginTop: 8, justifySelf: 'start' }} onClick={() => run({ action: 'waitlist-update', id: lead.id, admin_notes: notes })}>
+              {de ? 'Notiz speichern' : 'Save note'}
+            </Button>
+          </div>
+          <small className="muted">
+            {de ? 'Einwilligung' : 'Consent'}: „{lead.consent_text}“ {lead.source && `· ${de ? 'Quelle' : 'Source'}: ${lead.source}`}
+          </small>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={async () => {
+              if (!confirm(de ? 'Eintrag endgültig löschen (z. B. auf Wunsch der Firma)?' : 'Delete this entry permanently?')) return;
+              if (await action({ action: 'waitlist-delete', id: lead.id }, de ? 'Gelöscht' : 'Deleted')) {
+                onClose();
+                await reload();
+              }
+            }}
+          >
+            <Trash2 size={13} /> {de ? 'Löschen' : 'Delete'}
+          </Button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function SystemCheck() {
+  const { locale } = useI18n();
+  const de = locale === 'de';
+  const [env, setEnv] = useState<{ key: string; ok: boolean; required: boolean; hint: string }[] | null>(null);
+  useEffect(() => {
+    api<{ env: typeof env }>('/api/admin?system=1')
+      .then((r) => setEnv(r.env))
+      .catch(() => setEnv([]));
+  }, []);
+  if (!env) return null;
+  const problems = env.filter((c) => !c.ok && c.required).length;
+  return (
+    <section className="panel panel-body stack" style={{ marginBottom: 20 }}>
+      <div className="spread">
+        <h3 className="panel-title">{de ? 'Sicherheits- und Konfigurationscheck' : 'Security & configuration check'}</h3>
+        <span className={`badge ${problems ? 'badge-red' : 'badge-green'}`}>{problems ? `${problems} ${de ? 'Problem(e)' : 'problem(s)'}` : de ? 'Alles in Ordnung' : 'All good'}</span>
+      </div>
+      <small className="muted">{de ? 'Es werden nur Format und Vorhandensein geprüft – Werte werden nie angezeigt.' : 'Only format and presence are checked – values are never shown.'}</small>
+      {env.map((c) => (
+        <div key={c.key} className={`email-check ${c.ok ? 'ok' : c.required ? 'bad' : ''}`}>
+          {c.ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+          <span>
+            <strong>
+              <code>{c.key}</code> {!c.required && <small className="muted">({de ? 'optional' : 'optional'})</small>}
+            </strong>
+            {!c.ok && <small className="block muted">{c.hint}</small>}
+          </span>
+        </div>
+      ))}
+    </section>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, Check, Copy, Sparkles, Wand2, TrendingUp, AlertCircle, Lightbulb, UserX } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CalendarDays, Check, Copy, Plus, Sparkles, TrendingUp, AlertCircle, Lightbulb, UserX } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import { toast } from 'sonner';
 import { useWorkspace, useWorkspaceUI } from './shell';
@@ -10,7 +10,6 @@ import { BookingDetail } from './forms';
 import { Status } from './common';
 import type { Booking } from '@/lib/types';
 import { computeInsights } from '@/lib/ai/insights';
-import { parseBookingText } from '@/lib/ai/parse';
 import { industryById } from '@/lib/industries';
 
 export function Overview() {
@@ -20,7 +19,6 @@ export function Overview() {
   const de = locale === 'de';
   const tz = w.business.timezone;
   const [selected, setSelected] = useState<Booking | null>(null);
-  const [quick, setQuick] = useState('');
   const today = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd');
   const hour = Number(formatInTimeZone(new Date(), tz, 'H'));
   const greeting = de
@@ -33,7 +31,6 @@ export function Overview() {
   const insights = useMemo(() => computeInsights(w), [w]);
   const revenueToday = todays.reduce((s, b) => s + b.price_cents, 0);
   const money = (c: number) => new Intl.NumberFormat(locale, { style: 'currency', currency: w.business.currency, maximumFractionDigits: 0 }).format(c / 100);
-  const parsed = quick.trim().length > 3 ? parseBookingText(quick, { today, services: w.services.filter((s) => s.active), staff: w.staff.filter((s) => s.active) }) : null;
   const checks = [
     { label: de ? 'Leistung anlegen' : 'Add a service', done: w.services.some((s) => s.active), href: '/dashboard/services' },
     { label: de ? 'Arbeitszeiten festlegen' : 'Set working hours', done: w.availability.length > 0, href: '/dashboard/availability' },
@@ -63,38 +60,15 @@ export function Overview() {
                 : 'Nothing planned today yet. Time for new bookings!'}
           </p>
         </div>
-        {w.role !== 'staff' && w.features.includes('assistant') && (
-          <form
-            className="quick-add"
-            data-tour="quick-add"
-            onSubmit={(e) => {
-              e.preventDefault();
-              ui.openBooking({ ...(parsed || {}), text: quick, smart: true });
-              setQuick('');
-            }}
-          >
-            <Sparkles size={18} className="quick-icon" />
-            <input
-              value={quick}
-              onChange={(e) => setQuick(e.target.value)}
-              placeholder={de ? 'Termin in einem Satz: „Morgen 14 Uhr Haarschnitt Anna“' : 'One sentence: “tomorrow 2pm haircut Anna”'}
-              aria-label={de ? 'Termin schnell eintragen' : 'Quick add appointment'}
-            />
-            <button className="btn btn-primary">
-              <Wand2 size={15} />
-              <span className="hide-sm">{de ? 'Eintragen' : 'Add'}</span>
+        {w.role !== 'staff' && (
+          <div className="hero-actions-row">
+            <button className="btn btn-light" onClick={() => ui.openBooking()}>
+              <Plus size={16} /> {de ? 'Neuer Termin' : 'New appointment'}
             </button>
-            {parsed && parsed.understood.length > 0 && (
-              <div className="quick-chips">
-                {parsed.date && <span>📅 {new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(parsed.date + 'T12:00:00Z'))}</span>}
-                {parsed.time && <span>🕑 {parsed.time}</span>}
-                {parsed.serviceId && <span>✂️ {w.services.find((s) => s.id === parsed.serviceId)?.name}</span>}
-                {parsed.name && <span>👤 {parsed.name}</span>}
-                {parsed.staffId && <span>🧑‍💼 {w.staff.find((s) => s.id === parsed.staffId)?.name}</span>}
-                {parsed.phone && <span>📞 {parsed.phone}</span>}
-              </div>
-            )}
-          </form>
+            <Link className="btn btn-glass" href="/dashboard/calendar">
+              <CalendarDays size={16} /> {de ? 'Kalender öffnen' : 'Open calendar'}
+            </Link>
+          </div>
         )}
       </section>
       <div className="kpi-row">
@@ -220,7 +194,7 @@ export function Overview() {
               </div>
               {insights.length ? (
                 <div className="insight-list">
-                  {insights.slice(0, 5).map((i) => {
+                  {insights.slice(0, 3).map((i) => {
                     const Icon = i.tone === 'warn' ? AlertCircle : i.tone === 'good' ? TrendingUp : i.id === 'noshow' ? UserX : Lightbulb;
                     const content = (
                       <>

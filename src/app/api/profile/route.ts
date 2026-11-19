@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { line } from '@/lib/sanitize';
 import { body, failure, json, requireUser, sameOrigin } from '@/lib/http';
 export async function GET() {
   try {
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     sameOrigin(request);
     const { db, user } = await requireUser();
     const fields = z
-      .object({ name: z.string().trim().min(2).max(100), locale: z.enum(['en', 'de']) })
+      .object({ name: line(2, 100), locale: z.enum(['en', 'de']) })
       .parse(await body(request));
     const { error } = await db.from('profiles').upsert({ id: user.id, ...fields });
     if (error) throw error;

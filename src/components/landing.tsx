@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, Check, Sparkles, X, ShieldCheck, Zap, Heart } from 'lucide-react';
 import { MarketingNav, MarketingFooter } from './marketing';
 import { TutorialVisual } from './tutorial';
+import { WaitlistForm } from './waitlist-form';
 import { getLocale } from '@/lib/i18n/server';
 import { industries } from '@/lib/industries';
 import { PLAN_DEFAULTS } from '@/lib/billing';
@@ -44,12 +45,12 @@ export async function Landing() {
     <>
       <MarketingNav />
       <main className="landing">
-        <section className="l-hero">
+        <section className="l-hero l-hero-dark">
           <div className="l-glow" aria-hidden />
           <div className="market-container l-hero-grid">
             <div className="l-hero-copy">
               <span className="l-pill">
-                <Sparkles size={14} /> {de ? 'Neu: Slotdove KI – direkt im Browser' : 'New: Slotdove AI – right in your browser'}
+                <Sparkles size={14} /> {de ? 'Bald verfügbar · Frühzugang für ausgewählte Betriebe' : 'Coming soon · early access for selected businesses'}
               </span>
               <h1>
                 {de ? 'Termine planen.' : 'Scheduling,'}
@@ -62,10 +63,10 @@ export async function Landing() {
                   : 'Online booking, calendar, customer chat and reminders for small businesses. Set up in 2 minutes – no training, no commission.'}
               </p>
               <div className="l-cta">
-                <Link className="btn btn-primary btn-lg" href="/signup">
-                  {de ? 'Kostenlos testen' : 'Try for free'} <ArrowRight size={16} />
+                <Link className="btn btn-light btn-lg" href="#warteliste">
+                  {de ? 'Frühzugang sichern' : 'Get early access'} <ArrowRight size={16} />
                 </Link>
-                <Link className="btn btn-outline btn-lg" href="#features">
+                <Link className="btn btn-glass btn-lg" href="#features">
                   {de ? 'Funktionen ansehen' : 'See features'}
                 </Link>
               </div>
@@ -97,9 +98,9 @@ export async function Landing() {
                   <span className="viz-typing">{de ? 'Morgen 14 Uhr Färben Anna' : 'Tomorrow 2pm colour Anna'}</span>
                 </div>
                 {[
-                  ['09:00', 'Lena K.', de ? 'Haarschnitt' : 'Haircut', '#6a46f5'],
+                  ['09:00', 'Lena K.', de ? 'Haarschnitt' : 'Haircut', '#0d7f79'],
                   ['10:30', 'Jonas W.', de ? 'Bart trimmen' : 'Beard trim', '#14b8a6'],
-                  ['14:00', 'Anna M.', de ? 'Färben' : 'Colour', '#ec5fa8'],
+                  ['14:00', 'Anna M.', de ? 'Färben' : 'Colour', '#5fd6c6'],
                 ].map(([t, n, s, c], i) => (
                   <div className="l-mock-row" key={t} style={{ animationDelay: `${0.6 + i * 0.25}s`, borderLeftColor: c }}>
                     <b>{t}</b>
@@ -244,11 +245,41 @@ export async function Landing() {
                     </li>
                   ))}
                 </ul>
-                <Link className={`btn ${p.hot ? 'btn-primary' : 'btn-outline'}`} href="/signup">
-                  {de ? 'Starten' : 'Start'}
+                <Link className={`btn ${p.hot ? 'btn-primary' : 'btn-outline'}`} href={`/?plan=${p.id}#warteliste`}>
+                  {de ? '14 Tage kostenlos testen' : '14-day free trial'}
                 </Link>
               </div>
             ))}
+          </div>
+        </section>
+        <section className="l-section" id="warteliste">
+          <div className="market-container wl-wrap">
+            <div className="wl-intro">
+              <span className="eyebrow">{de ? 'Frühzugang' : 'Early access'}</span>
+              <h2>{de ? 'Seien Sie von Anfang an dabei.' : 'Be there from day one.'}</h2>
+              <p>
+                {de
+                  ? 'Slotdove startet bald. Tragen Sie sich ein – wir melden uns persönlich und schalten Ihnen auf Wunsch Ihren Wunschtarif 14 Tage kostenlos frei.'
+                  : 'Slotdove launches soon. Join the list – we will contact you personally and, if you like, unlock your preferred plan free for 14 days.'}
+              </p>
+              <ul className="wl-points">
+                <li>
+                  <Check size={16} /> {de ? 'Kostenlos und unverbindlich' : 'Free and without obligation'}
+                </li>
+                <li>
+                  <Check size={16} /> {de ? 'Persönliche Einrichtung' : 'Personal setup'}
+                </li>
+                <li>
+                  <Check size={16} /> {de ? 'Ihre Wünsche fließen in die Entwicklung ein' : 'Your wishes shape the product'}
+                </li>
+                <li>
+                  <Check size={16} /> {de ? 'Keine Kreditkarte, keine automatische Verlängerung' : 'No credit card, no auto-renewal'}
+                </li>
+              </ul>
+            </div>
+            <div className="wl-card">
+              <WaitlistForm />
+            </div>
           </div>
         </section>
         <section className="market-container l-section narrow" id="faq">
@@ -274,8 +305,8 @@ export async function Landing() {
             </div>
             <h2>{de ? 'Bereit für weniger Telefon und mehr Zeit?' : 'Ready for fewer calls and more time?'}</h2>
             <p>{de ? 'Leg jetzt los – in 2 Minuten ist deine Buchungsseite online.' : 'Start now – your booking page is online in 2 minutes.'}</p>
-            <Link className="btn btn-light btn-lg" href="/signup">
-              {de ? 'Jetzt starten' : 'Get started'} <ArrowRight size={16} />
+            <Link className="btn btn-light btn-lg" href="#warteliste">
+              {de ? 'Frühzugang sichern' : 'Get early access'} <ArrowRight size={16} />
             </Link>
           </div>
         </section>

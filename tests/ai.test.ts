@@ -54,3 +54,11 @@ describe('text search', () => {
     expect(index.search('Wie trage ich Feiertage ein?')[0]?.item).toContain('Feiertage');
   });
 });
+import { cleanText } from '../src/lib/sanitize';
+describe('form sanitising', () => {
+  it('removes tags, control characters and hidden unicode', () => {
+    expect(cleanText('  Salon <script>alert(1)</script>Aurora‮\u0007  ')).toBe('Salon alert(1)Aurora');
+    expect(cleanText('Zeile 1\r\nZeile 2\u0000', true)).toBe('Zeile 1\nZeile 2');
+    expect(cleanText('Müller &amp; Söhne')).toBe('Müller &amp; Söhne');
+  });
+});

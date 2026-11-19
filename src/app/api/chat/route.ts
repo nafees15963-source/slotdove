@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { body, failure, HttpError, json, requireBusiness, sameOrigin } from '@/lib/http';
+import { text } from '@/lib/sanitize';
+import { body, failure, HttpError, json, requireBusiness, sameOrigin, softRateLimit } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { ensureConversation, postMessage } from '@/lib/chat';
 import { logActivity } from '@/lib/activity';
@@ -55,10 +56,11 @@ export async function POST(request: Request) {
         conversation: z.uuid().optional(),
         booking: z.uuid().optional(),
         message: z.uuid().optional(),
-        text: z.string().trim().min(1).max(4000).optional(),
+        text: text(4000).pipe(z.string().min(1)).optional(),
         reason: z.string().max(500).default(''),
       })
       .parse(await body(request));
+    await softRateLimit(request, `chat-${input.action}`, input.action === 'send' ? 60 : 20);
     const { admin, user, conversation, role } = await access(input.business, input.conversation || null);
     if (input.action === 'start-customer') {
       if (role === 'staff') throw new HttpError(403, 'FORBIDDEN');

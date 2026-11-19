@@ -7,9 +7,9 @@
   --ink: #282631;
   --muted: #716e7e;
   --line: #eae8ef;
-  --purple: #7460db;
-  --purple-dark: #5c45c5;
-  --purple-soft: #eeebfb;
+  --purple: #0d7f79;
+  --purple-dark: #0a6964;
+  --purple-soft: #e3f4f2;
   --green: #3a8c75;
   --green-soft: #e9f5ef;
   --shadow: 0 12px 44px #28263108;
@@ -22,9 +22,9 @@
   --ink: #eeedf4;
   --muted: #a5a2b4;
   --line: #34313e;
-  --purple: #a392ff;
-  --purple-dark: #8a72f4;
-  --purple-soft: #32294c;
+  --purple: #3fd0be;
+  --purple-dark: #2bb8a7;
+  --purple-soft: #0f3b3c;
   --green: #84d2b5;
   --green-soft: #203e34;
   --shadow: 0 12px 44px #0002;
@@ -304,14 +304,14 @@ tbody tr:hover {
 .btn-primary {
   background: var(--purple);
   color: #fff;
-  box-shadow: 0 3px 7px #5b3cc020;
+  box-shadow: 0 3px 7px #0b5f5a20;
 }
 .dark .btn-primary {
-  color: #191321;
+  color: #04201e;
 }
 .btn-primary:hover {
   background: var(--purple-dark);
-  box-shadow: 0 6px 16px #5b3cc025;
+  box-shadow: 0 6px 16px #0b5f5a25;
 }
 .btn-outline {
   border-color: var(--line);

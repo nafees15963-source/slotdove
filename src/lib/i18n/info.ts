@@ -44,6 +44,18 @@ export const infoContent = {
           'Account email and profile details support sign-in. Appointment names, email addresses, optional phone numbers and notes are used to provide scheduling, reminders and customer service. Do not enter sensitive health or financial information into notes.',
         ],
         [
+          'Waitlist (early access)',
+          'When you join the waitlist we store company, name, email, optional phone, industry, city, team size, plan preference and message, plus the wording and time of your consent (Art. 6(1)(a) GDPR). Purpose: contacting you about the test phase and launch. You can withdraw consent at any time by replying to our email; we then delete your entry. Entries without contact are deleted after 12 months at the latest.',
+        ],
+        [
+          'AI assistant',
+          'Optionally, a language model by Groq (USA) answers questions in the dashboard. Only the appointment data and figures needed for the question are sent – no email addresses or phone numbers. Without it, a local AI runs in the browser with no data transfer.',
+        ],
+        [
+          'Chat and security',
+          'Chat messages are screened automatically for insults, threats and scams; flagged or reported messages can be reviewed by the Slotdove team. To prevent abuse we log sign-ins and actions with a shortened, non-reversible IP identifier (legitimate interest, Art. 6(1)(f) GDPR).',
+        ],
+        [
           'Service providers',
           'Supabase provides database, authentication and storage. Resend processes transactional email when enabled. The chosen hosting provider serves the application. The operator must document processing agreements, hosting regions, international transfers and lawful bases.',
         ],
@@ -147,6 +159,18 @@ export const infoContent = {
         [
           'Daten und Zwecke',
           'E-Mail-Adresse und Profildaten ermöglichen die Anmeldung. Namen, E-Mail-Adressen, optionale Telefonnummern und Notizen dienen der Terminplanung, Erinnerung und Kundenbetreuung. Trage keine sensiblen Gesundheits- oder Finanzinformationen in Notizen ein.',
+        ],
+        [
+          'Warteliste (Frühzugang)',
+          'Wenn du dich auf die Warteliste einträgst, speichern wir Firma, Name, E-Mail, optional Telefon, Branche, Ort, Teamgröße, Tarifwunsch und Nachricht sowie den Wortlaut und Zeitpunkt deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Zweck: Kontaktaufnahme zur Testphase und zum Start. Du kannst die Einwilligung jederzeit per Antwort auf unsere E-Mail widerrufen; wir löschen deinen Eintrag dann. Einträge ohne Kontaktaufnahme löschen wir spätestens nach 12 Monaten.',
+        ],
+        [
+          'KI-Assistent',
+          'Optional beantwortet ein Sprachmodell des Anbieters Groq (USA) Fragen im Dashboard. Dabei werden nur die für die Frage nötigen Termin- und Kennzahlen übermittelt – keine E-Mail-Adressen oder Telefonnummern. Ohne Freischaltung läuft eine lokale KI im Browser ohne Datenübermittlung.',
+        ],
+        [
+          'Chat und Sicherheit',
+          'Chatnachrichten werden automatisch auf Beleidigungen, Drohungen und Betrugsversuche geprüft; markierte oder gemeldete Nachrichten kann das Slotdove-Team einsehen. Zum Schutz vor Missbrauch protokollieren wir Anmeldungen und Aktionen mit gekürzter, nicht rückführbarer IP-Kennung (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO).',
         ],
         [
           'Dienstleister',

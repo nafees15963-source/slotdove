@@ -115,3 +115,13 @@ export async function rateLimit(request: Request, scope: string, limit = 20) {
     if (!data) throw new HttpError(429, 'RATE_LIMITED');
   }
 }
+
+/** Rate limit that never blocks the action when the limiter itself is unavailable
+ * (e.g. missing server key in local development), but always enforces 429. */
+export async function softRateLimit(request: Request, scope: string, limit: number) {
+  try {
+    await rateLimit(request, scope, limit);
+  } catch (e) {
+    if (e instanceof HttpError && e.status === 429) throw e;
+  }
+}

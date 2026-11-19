@@ -1,6 +1,7 @@
 'use client';
 import { useWorkspace, staffSections } from './shell';
 import { Chat } from './chat';
+import { SettingsTabs, settingsSections } from './settings-tabs';
 import { SupportDesk } from './support';
 import { useI18n } from '../providers';
 import { Overview } from './overview';
@@ -13,6 +14,13 @@ export function PageContent({ section }: { section: string }) {
     { t } = useI18n();
   if (w.role === 'staff' && !staffSections.includes(section))
     return <div className="notice">{t.notAuthorized}</div>;
+  if (settingsSections.includes(section))
+    return (
+      <>
+        <SettingsTabs section={section} />
+        {section === 'settings' ? <Settings /> : section === 'notifications' ? <Notifications /> : section === 'integrations' ? <Integrations /> : <Billing />}
+      </>
+    );
   switch (section) {
     case 'calendar':
       return <Schedule />;

@@ -1,12 +1,13 @@
 import { z } from 'zod';
+import { line } from '@/lib/sanitize';
 import { businessSchema } from '@/lib/validation';
-import { body, failure, json, requireUser, sameOrigin } from '@/lib/http';
+import { body, failure, json, requireUser, sameOrigin, softRateLimit } from '@/lib/http';
 import { hourPresets, industryById } from '@/lib/industries';
 import { logActivity } from '@/lib/activity';
 const extra = z.object({
   use_template: z.boolean().default(true),
   hours: z.enum(['weekdays', 'saturday', 'late', 'none']).default('weekdays'),
-  owner_name: z.string().trim().min(2).max(100).optional(),
+  owner_name: line(2, 100).optional(),
 });
 function slugify(name: string) {
   const base = name
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
   try {
     sameOrigin(request);
     const { db, user } = await requireUser();
+    await softRateLimit(request, 'business-create', 5);
     const raw = await body(request);
     const options = extra.parse(raw);
     const input = businessSchema.parse({ ...raw, slug: raw.slug || slugify(String(raw.name || '')) });
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
       .select('id')
       .single();
     if (options.use_template) {
-      const colors = ['#6d4aff', '#f97362', '#14b8a6', '#f59e0b', '#3b82f6'];
+      const colors = ['#0d7f79', '#f2994a', '#2f80ed', '#9b51e0', '#e0607e'];
       const { data: services } = await db
         .from('services')
         .insert(

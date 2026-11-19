@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { body, failure, hashToken, HttpError, json, requireUser, sameOrigin } from '@/lib/http';
+import { body, failure, hashToken, HttpError, json, requireUser, sameOrigin, softRateLimit } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
+    await softRateLimit(request, 'invite-accept', 10);
     const { user } = await requireUser();
     if (!user.email_confirmed_at || !user.email) throw new HttpError(403, 'VERIFY_EMAIL_FIRST');
     const { token } = z

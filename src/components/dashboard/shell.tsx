@@ -86,9 +86,9 @@ export const sections = [
   ['support', LifeBuoy],
 ] as const;
 const groups: { title: [string, string]; keys: string[] }[] = [
-  { title: ['Täglich', 'Daily'], keys: ['overview', 'calendar', 'appointments', 'customers', 'chat'] },
+  { title: ['Täglich', 'Daily'], keys: ['overview', 'calendar', 'customers', 'chat'] },
   { title: ['Einrichten', 'Set up'], keys: ['services', 'staff', 'availability', 'booking'] },
-  { title: ['Mehr', 'More'], keys: ['analytics', 'notifications', 'integrations', 'settings', 'billing', 'support'] },
+  { title: ['Mehr', 'More'], keys: ['analytics', 'settings', 'support'] },
 ];
 export const staffSections = ['overview', 'calendar', 'appointments', 'chat', 'support'];
 export function sectionLabel(key: string, locale: string) {
@@ -201,12 +201,13 @@ function ShellInner({
                   <div className="nav-label">{g.title[de ? 0 : 1]}</div>
                   {keys.map((key) => {
                     const Icon = sections.find(([k]) => k === key)![1];
+                    const current = section === key || (key === 'settings' && ['notifications', 'integrations', 'billing'].includes(section)) || (key === 'calendar' && section === 'appointments');
                     return (
                       <Link
                         key={key}
                         prefetch
-                        aria-current={section === key ? 'page' : undefined}
-                        className={`nav-link ${section === key ? 'active' : ''}`}
+                        aria-current={current ? 'page' : undefined}
+                        className={`nav-link ${current ? 'active' : ''}`}
                         href={key === 'overview' ? '/dashboard' : `/dashboard/${key}`}
                         onClick={() => setOpen(false)}
                       >
@@ -266,9 +267,8 @@ function ShellInner({
                 </span>
               )}
               {workspace.features.includes('assistant') && (
-                <button className="btn btn-ai btn-sm" onClick={() => setAssistant(true)} title="Ctrl/⌘ + K">
+                <button className="btn btn-ghost btn-icon" onClick={() => setAssistant(true)} title={de ? 'Slotdove KI (Strg/⌘ + K)' : 'Slotdove AI (Ctrl/⌘ + K)'} aria-label={de ? 'Slotdove KI öffnen' : 'Open Slotdove AI'}>
                   <Sparkles size={15} />
-                  <span className="hide-sm">{de ? 'KI fragen' : 'Ask AI'}</span>
                 </button>
               )}
               <button className="btn btn-ghost btn-sm" onClick={() => tutorial.start(section)} aria-label={de ? 'Tutorial für diese Seite' : 'Tutorial for this page'}>

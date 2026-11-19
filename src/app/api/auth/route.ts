@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supabaseServer } from '@/lib/supabase/server';
-import { body, failure, HttpError, json, sameOrigin } from '@/lib/http';
+import { body, failure, HttpError, json, sameOrigin, softRateLimit } from '@/lib/http';
 import { logActivity } from '@/lib/activity';
 const schema = z.object({
   action: z.enum(['login', 'signup', 'reset', 'update', 'logout']),
@@ -12,6 +12,11 @@ export async function POST(request: Request) {
   try {
     sameOrigin(request);
     const input = schema.parse(await body(request));
+    // Brute-force and spam protection per IP (and a global ceiling inside rateLimit).
+    if (input.action === 'login') await softRateLimit(request, 'auth-login', 10);
+    if (input.action === 'signup') await softRateLimit(request, 'auth-signup', 5);
+    if (input.action === 'reset') await softRateLimit(request, 'auth-reset', 5);
+    if (input.action === 'update') await softRateLimit(request, 'auth-update', 10);
     const db = await supabaseServer();
     const site = new URL(request.url).origin;
     if (input.action === 'logout') {

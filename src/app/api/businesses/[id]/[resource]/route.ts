@@ -1,6 +1,7 @@
 import { exportRows } from '@/lib/export-data';
 import { sendEmail, invitationEmail } from '@/lib/email';
 import { z } from 'zod';
+import { line } from '@/lib/sanitize';
 import {
   customerSchema,
   hoursSchema,
@@ -30,7 +31,7 @@ const internalBookingSchema = z.object({
   staff_id: z.uuid().nullable(),
   customer_id: z.uuid().optional(),
   starts_at: z.iso.datetime({ offset: true }),
-  name: z.string().trim().min(2).max(100),
+  name: line(2, 100),
   email: z
     .union([z.email().max(254), z.literal('')])
     .optional()
