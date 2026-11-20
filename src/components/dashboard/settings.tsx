@@ -2,7 +2,7 @@
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { dateDe, RELEASE_DEFAULT, safeSupportUrl, SUPPORT_DEFAULT, type Release, type Support } from '@/lib/release';
 import { SupportCard } from '../support-card';
-import { AccountPrivacy } from './trust-dialogs';
+import { AccountPrivacy, HistoryPanel } from './trust-dialogs';
 import { InfoTip } from '../tutorial';
 import type { Visual } from '@/lib/tutorials';
 import { industries, industryById } from '@/lib/industries';
@@ -271,6 +271,7 @@ export function Settings({ bookingOnly = false }: { bookingOnly?: boolean }) {
                 </div>
               </div>
             )}
+            {!bookingOnly && ['owner', 'admin'].includes(w.role) && <HistoryPanel />}
             {bookingOnly && (
               <div className="panel settings-section">
                 <h3>{locale === 'de' ? 'Auf deiner Website teilen' : 'Share on your website'}</h3>
@@ -584,8 +585,9 @@ export function Billing() {
         setCfg(next);
       });
   }, []);
+  const ownUntil = w.business.free_until && w.business.free_until > cfg.release.free_until ? w.business.free_until : cfg.release.free_until;
   const from = dateDe(cfg.release.free_from),
-    until = dateDe(cfg.release.free_until),
+    until = dateDe(ownUntil),
     after = String(Number(cfg.release.free_until.slice(0, 4)) + 1);
   const plans = [
     { id: 'free', name: 'Starter', price: 5, items: de ? ['1 Kalender', 'Online-Buchungsseite', 'E-Mail-Erinnerungen', 'Chat'] : ['1 calendar', 'Online booking page', 'Email reminders', 'Chat'] },
@@ -602,6 +604,11 @@ export function Billing() {
           <small>{de ? 'Slotdove ist ein privates, nicht-kommerzielles Testprojekt: Es wird kein Geld verlangt, es gibt kein Abo und nichts zu kündigen. Bereitstellung ohne Gewähr.' : 'Slotdove is a private, non-commercial test project: no money is requested, no subscription. Provided without warranty.'}</small>
         </span>
       </div>
+      {w.business.early_adopter && (
+        <p className="notice" style={{ marginBottom: 12 }}>
+          {de ? '⭐ Du bist Early Adopter – danke, dass du von Anfang an dabei bist!' : '⭐ You are an early adopter – thank you!'}
+        </p>
+      )}
       <SupportCard support={cfg.support} de={de} compact />
       <h3 style={{ margin: '26px 0 12px' }}>{de ? `Unverbindliche Beispielpreise für eine mögliche Weiterführung ab ${after}` : `Non-binding example prices for a possible continuation from ${after}`}</h3>
       <div className="plan-grid">

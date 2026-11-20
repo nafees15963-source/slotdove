@@ -281,6 +281,11 @@ export function AccountPrivacy() {
       <Button variant="outline" asChild>
         <a href={`/api/account`}>{de ? 'Meine persönlichen Daten (JSON)' : 'My personal data (JSON)'}</a>
       </Button>
+      <Button variant="outline" asChild>
+        <a href={`/account/nachweis`} target="_blank">
+          {de ? 'Mein Vertragsnachweis (PDF)' : 'My signed agreement (PDF)'}
+        </a>
+      </Button>
       <Button
         variant="ghost"
         onClick={async () => {
@@ -301,7 +306,7 @@ export function AccountPrivacy() {
         <div className="stack">
           <div className="notice notice-warn">
             {de
-              ? `Dein Konto wird sofort gelöscht. ${w.role === 'owner' ? `Dein Betrieb „${w.business.name}“ und alle Termine, Kunden und Einstellungen werden ebenfalls unwiderruflich gelöscht. Exportiere vorher deine Daten.` : 'Du verlierst den Zugang zu allen Betrieben.'} Gesetzlich aufzubewahrende Belege bleiben gesperrt erhalten.`
+              ? `Dein Konto wird sofort gesperrt${w.role === 'owner' ? ` und dein Betrieb „${w.business.name}“ offline genommen` : ''}. 14 Tage lang kann alles auf Wunsch wiederhergestellt werden (E-Mail an uns). Danach werden Konto${w.role === 'owner' ? ', Betrieb, Termine, Kunden und Bilder' : ''} endgültig gelöscht. Exportiere vorher deine Daten.`
               : 'Your account will be deleted immediately, including businesses you own and all their data. Export first.'}
           </div>
           <label htmlFor="del-confirm">{de ? 'Tippe LÖSCHEN zur Bestätigung' : 'Type LÖSCHEN to confirm'}</label>
@@ -325,5 +330,75 @@ export function AccountPrivacy() {
         </div>
       </Dialog>
     </>
+  );
+}
+
+const historyLabels: Record<string, string> = {
+  'bookings.create': 'Termin angelegt',
+  'bookings.update': 'Termin bearbeitet',
+  'bookings.delete': 'Termin gelöscht',
+  'booking-status.create': 'Termin geändert/abgesagt',
+  'booking-status.update': 'Termin geändert/abgesagt',
+  'customers.create': 'Kunde angelegt',
+  'customers.update': 'Kunde bearbeitet',
+  'customers.delete': 'Kunde gelöscht',
+  'anonymize-customer.create': 'Kunde anonymisiert',
+  'services.create': 'Leistung angelegt',
+  'services.update': 'Leistung bearbeitet',
+  'services.delete': 'Leistung gelöscht',
+  'staff.create': 'Teammitglied angelegt',
+  'staff.update': 'Teammitglied bearbeitet',
+  'staff.delete': 'Teammitglied entfernt',
+  'staff-account.create': 'Mitarbeiter-Zugang erstellt',
+  'settings.update': 'Einstellungen geändert',
+  'settings.create': 'Einstellungen geändert',
+  'week-plan-replace.create': 'Arbeitszeiten geändert',
+  'holidays.create': 'Feiertage eingetragen',
+  'blocks.create': 'Abwesenheit eingetragen',
+  'blocks.delete': 'Abwesenheit gelöscht',
+  'invitations.create': 'Einladung verschickt',
+  'customer.booked': 'Kunde hat online gebucht',
+  'customer.cancelled': 'Kunde hat abgesagt',
+  'customer.rescheduled': 'Kunde hat verschoben',
+  'report.created': 'Meldung abgeschickt',
+};
+/** Owner/admin change log: who changed what in the last 90 days. */
+export function HistoryPanel() {
+  const w = useWorkspace(),
+    { locale } = useI18n(),
+    [rows, setRows] = useState<{ action: string; at: string; who: string; detail: string }[] | null>(null);
+  const de = locale === 'de';
+  return (
+    <div className="panel settings-section">
+      <h3>{de ? 'Änderungsprotokoll (90 Tage)' : 'Change log (90 days)'}</h3>
+      <p className="muted" style={{ fontSize: 12 }}>
+        {de ? 'Wer hat wann was geändert? Hilfreich, wenn ein Termin „verschwunden“ ist.' : 'Who changed what and when.'}
+      </p>
+      {!rows ? (
+        <Button
+          variant="outline"
+          onClick={() =>
+            api<{ entries: NonNullable<typeof rows> }>(`/api/businesses/${w.business.id}/history`)
+              .then((r) => setRows(r.entries))
+              .catch((e) => toast.error(friendlyError(e, locale)))
+          }
+        >
+          {de ? 'Protokoll anzeigen' : 'Show log'}
+        </Button>
+      ) : (
+        <div className="history-list">
+          {rows.map((r, i) => (
+            <div key={i} className="history-row">
+              <time>{new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(r.at))}</time>
+              <span>
+                <strong>{r.who}</strong> · {historyLabels[r.action] || r.action}
+                {r.detail ? ` · ${r.detail}` : ''}
+              </span>
+            </div>
+          ))}
+          {!rows.length && <p className="muted">{de ? 'Keine Einträge.' : 'No entries.'}</p>}
+        </div>
+      )}
+    </div>
   );
 }

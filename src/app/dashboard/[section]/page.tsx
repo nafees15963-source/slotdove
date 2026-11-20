@@ -20,6 +20,7 @@ export default async function Page({ params }: { params: Promise<{ section: stri
       'integrations',
       'settings',
       'billing',
+      'wishes',
     ].includes(section)
   )
     notFound();

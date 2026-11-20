@@ -8,6 +8,8 @@ export default async function Page() {
     data: { user },
   } = await db.auth.getUser();
   if (!user) redirect('/login');
+  const { data: isPlatformAdmin } = await db.rpc('my_platform_role');
+  if (isPlatformAdmin) redirect('/admin');
   if (!(await hasSignedTerms(user.id))) redirect('/account/vertrag?next=/onboarding');
   return <Onboarding email={user.email || ''} />;
 }

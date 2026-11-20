@@ -323,7 +323,7 @@ export default function Page() {
           </tr>
         </thead>
         <tbody>
-          <tr><td>Benutzerkonto (Betrieb oder Mitarbeiter)</td><td>sofort bei Löschung im Konto; bei Kündigung spätestens 30 Tage nach Vertragsende</td></tr>
+          <tr><td>Benutzerkonto (Betrieb oder Mitarbeiter)</td><td>bei Löschung im Konto sofort gesperrt und offline; 14 Tage wiederherstellbar („Papierkorb“), danach automatisch endgültig gelöscht</td></tr>
           <tr><td>Nie bestätigte Registrierungen</td><td>automatisch nach 30 Tagen</td></tr>
           <tr><td>Buchungs-, Kunden- und Chatdaten der Betriebe</td><td>nach Weisung des Betriebs (Löschen/Anonymisieren im Dashboard); spätestens 30 Tage nach Löschung des Betriebs</td></tr>
           <tr><td>Chat-Verläufe</td><td>automatisch 24 Monate nach der letzten Nachricht; mit dem zugehörigen Termin sofort</td></tr>
@@ -352,8 +352,8 @@ export default function Page() {
       <h2 id="loeschen">So löschen Sie Ihre Daten</h2>
       <ul>
         <li>
-          <strong>Als Betrieb oder Teammitglied:</strong> Einstellungen → Konto → „Konto endgültig löschen“. Ihr Konto wird sofort gelöscht; gehört Ihnen ein Betrieb, werden dieser und alle zugehörigen
-          Termine, Kunden, Bilder und Chats ebenfalls gelöscht. Vorher können Sie unter „Meine persönlichen Daten (JSON)“ und „Kunden → Export“ alles herunterladen.
+          <strong>Als Betrieb oder Teammitglied:</strong> Einstellungen → Konto → „Konto endgültig löschen“. Ihr Konto wird sofort gesperrt und Ihr Betrieb offline genommen. 14 Tage lang kann alles auf Wunsch wiederhergestellt werden; danach werden Konto, Betrieb und alle zugehörigen
+          Termine, Kunden, Bilder und Chats automatisch endgültig gelöscht. Vorher können Sie unter „Meine persönlichen Daten (JSON)“ und „Kunden → Export“ alles herunterladen.
         </li>
         <li>
           <strong>Als Kundin oder Kunde eines Betriebs:</strong> Wenden Sie sich an den Betrieb, bei dem Sie gebucht haben. Der Betrieb kann Ihre Daten im Dashboard exportieren und anonymisieren. Sie

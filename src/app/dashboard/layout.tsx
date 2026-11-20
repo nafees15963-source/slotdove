@@ -8,6 +8,6 @@ export default async function Layout({ children }: { children: React.ReactNode }
   // Accounts created by an owner start with a temporary password that must be replaced.
   if (data.mustChangePassword) redirect('/account/password?first=1');
   // Everyone signs the current terms (with typed full name) before using the dashboard.
-  if (!(await hasSignedTerms(data.user.id))) redirect('/account/vertrag?next=/dashboard');
+  if (!data.supportMode && !(await hasSignedTerms(data.user.id))) redirect('/account/vertrag?next=/dashboard');
   return <DashboardShell {...data}>{children}</DashboardShell>;
 }

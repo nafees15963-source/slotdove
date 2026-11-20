@@ -26,6 +26,7 @@ import {
   CircleHelp,
   Plus,
   LifeBuoy,
+  Lightbulb,
   X,
   Megaphone,
   FlaskConical,
@@ -67,6 +68,7 @@ const labels: Record<string, [string, string]> = {
   settings: ['Einstellungen', 'Settings'],
   billing: ['Tarif', 'Plan'],
   support: ['Hilfe & Support', 'Help & support'],
+  wishes: ['Wünsche & Ideen', 'Wishes & ideas'],
 };
 export const sections = [
   ['overview', Sun],
@@ -84,13 +86,14 @@ export const sections = [
   ['settings', Settings2],
   ['billing', CreditCard],
   ['support', LifeBuoy],
+  ['wishes', Lightbulb],
 ] as const;
 const groups: { title: [string, string]; keys: string[] }[] = [
   { title: ['Täglich', 'Daily'], keys: ['overview', 'calendar', 'customers', 'chat'] },
   { title: ['Einrichten', 'Set up'], keys: ['services', 'staff', 'availability', 'booking'] },
-  { title: ['Mehr', 'More'], keys: ['analytics', 'settings', 'support'] },
+  { title: ['Mehr', 'More'], keys: ['analytics', 'settings', 'wishes', 'support'] },
 ];
-export const staffSections = ['overview', 'calendar', 'appointments', 'chat', 'support'];
+export const staffSections = ['overview', 'calendar', 'appointments', 'chat', 'support', 'wishes'];
 export function sectionLabel(key: string, locale: string) {
   return (labels[key] || labels.overview)[locale === 'de' ? 0 : 1];
 }

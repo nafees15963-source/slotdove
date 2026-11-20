@@ -1,5 +1,7 @@
 export type Business = {
   notifications_enabled: boolean;
+  early_adopter?: boolean;
+  free_until?: string | null;
   reminder_hours: number[];
   logo_path: string | null;
   id: string;

@@ -37,6 +37,9 @@ import {
   Users,
   X,
   BarChart3,
+  Landmark,
+  Lightbulb,
+  Quote,
   FileSignature,
   Check,
   FileLock2,
@@ -44,6 +47,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Brand } from './brand';
+import { AdminAccounts, AuthorityDesk, BusinessCare, SnippetsDesk, StatusEditor, TrashDesk, UsageCard, WishesDesk } from './admin-trust';
 import { BlocklistDesk, CreateUserButton, DsrDesk, GlobalSearch, PlatformDesk, ReleaseDesk, ReportsDesk, SignaturesDesk, StatsDesk, UserSecurity } from './admin-trust';
 import { Preferences } from './preferences';
 import { Button } from './ui/button';
@@ -100,7 +104,7 @@ type AdminData = {
   tickets: AdminTicket[];
 };
 type AdminTicket = { id: string; case_number: string; business_id: string | null; user_id: string | null; contact_email: string; subject: string; category: string; priority: string; status: TicketStatus; assigned_to: string | null; last_reply_by: string; created_at: string; updated_at: string };
-type Tab = 'overview' | 'signatures' | 'search' | 'support' | 'reports' | 'gdpr' | 'blocklist' | 'stats' | 'platform' | 'waitlist' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
+type Tab = 'overview' | 'wishes' | 'snippets' | 'trash' | 'authority' | 'signatures' | 'search' | 'support' | 'reports' | 'gdpr' | 'blocklist' | 'stats' | 'platform' | 'waitlist' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
 const bannedNow = (until: string | null | undefined) => !!until && Date.parse(until) > Date.now();
 const inPast = (date: string | null | undefined) => !!date && Date.parse(date) <= Date.now();
 const fmt = (iso: string | null | undefined, locale: string) =>
@@ -180,19 +184,23 @@ function AdminConsole() {
   const openReports = data?.reports.filter((r) => r.status === 'open') || [];
   const nav: [Tab, typeof LayoutDashboard, string, number?, string?][] = [
     ['overview', LayoutDashboard, de ? 'Übersicht' : 'Overview', undefined, de ? 'Allgemein' : 'General'],
-    ['search', Search, de ? 'Globale Suche' : 'Global search'],
+    ['search', Search, de ? 'Suche' : 'Search'],
     ['stats', BarChart3, de ? 'Statistik' : 'Statistics'],
     ['businesses', Building2, de ? 'Unternehmen' : 'Businesses', data?.businesses.length, de ? 'Kunden' : 'Customers'],
     ['users', Users, de ? 'Benutzer' : 'Users', data?.risks.filter((r) => r.score >= 0.5).length || undefined],
     ['waitlist', ListChecks, de ? 'Voranmeldungen' : 'Pre-registrations', data?.waitlistNew || undefined],
-    ['support', LifeBuoy, de ? 'Support-Panel' : 'Support desk', data?.tickets.filter((t) => !['resolved', 'closed'].includes(t.status) && t.last_reply_by === 'user').length || undefined],
-    ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined, de ? 'Sicherheit & Recht' : 'Trust & legal'],
+    ['support', LifeBuoy, de ? 'Support' : 'Support', data?.tickets.filter((t) => !['resolved', 'closed'].includes(t.status) && t.last_reply_by === 'user').length || undefined],
+    ['wishes', Lightbulb, de ? 'Wünsche' : 'Wishes'],
+    ['moderation', MessageCircle, de ? 'Chats' : 'Chats', openReports.length || undefined, de ? 'Recht & Sicherheit' : 'Trust & legal'],
     ['reports', Flag, de ? 'Meldungen (DSA)' : 'Reports (DSA)'],
     ['signatures', FileSignature, de ? 'Unterschriften' : 'Signatures'],
     ['gdpr', FileLock2, de ? 'DSGVO-Anfragen' : 'GDPR requests'],
+    ['authority', Landmark, de ? 'Behördenanfragen' : 'Authority requests'],
     ['blocklist', ShieldAlert, de ? 'Sperrliste' : 'Blocklist'],
+    ['trash', Trash2, de ? 'Papierkorb' : 'Trash'],
     ['platform', Power, de ? 'Plattform & Release' : 'Platform & release', undefined, 'System'],
-    ['features', FlaskConical, de ? 'Beta & Funktionen' : 'Beta & features'],
+    ['snippets', Quote, de ? 'Textbausteine' : 'Snippets'],
+    ['features', FlaskConical, de ? 'Beta-Funktionen' : 'Beta features'],
     ['email', Mail, de ? 'System & E-Mail' : 'System & email'],
     ['announcements', Megaphone, de ? 'Mitteilungen' : 'Announcements'],
     ['logs', ScrollText, de ? 'Protokolle' : 'Logs'],
@@ -276,11 +284,14 @@ function AdminConsole() {
                 </div>
               ))}
             </div>
+            <div style={{ margin: '16px 0' }}>
+              <UsageCard />
+            </div>
             <div className="admin-grid">
               <section className="panel">
                 <div className="panel-head">
                   <h2 className="panel-title row">
-                    <AlertTriangle size={16} className="amber" /> {de ? 'KI-Risikoanalyse' : 'AI risk analysis'}
+                    <AlertTriangle size={16} className="amber" /> {de ? 'Risikoanalyse' : 'Risk analysis'}
                   </h2>
                   <small className="muted">{de ? 'letzte 14 Tage' : 'last 14 days'}</small>
                 </div>
@@ -294,7 +305,7 @@ function AdminConsole() {
                       </span>
                     </button>
                   ))}
-                  {!data.risks.length && <p className="muted">{de ? 'Keine Auffälligkeiten. 👍' : 'Nothing suspicious. 👍'}</p>}
+                  {!data.risks.length && <p className="muted">{de ? 'Keine Auffälligkeiten.' : 'Nothing suspicious.'}</p>}
                 </div>
               </section>
               <section className="panel">
@@ -358,10 +369,21 @@ function AdminConsole() {
         {tab === 'reports' && <ReportsDesk nameOf={nameOf} />}
         {tab === 'gdpr' && <DsrDesk />}
         {tab === 'signatures' && <SignaturesDesk onUser={setUser} />}
+        {tab === 'wishes' && <WishesDesk />}
+        {tab === 'snippets' && <SnippetsDesk />}
+        {tab === 'trash' && <TrashDesk />}
+        {tab === 'authority' && <AuthorityDesk />}
         {tab === 'blocklist' && <BlocklistDesk />}
         {tab === 'platform' && (
           <>
             <ReleaseDesk />
+            <div className="admin-grid" style={{ marginBottom: 18 }}>
+              <AdminAccounts />
+              <UsageCard />
+            </div>
+            <div className="admin-grid" style={{ marginBottom: 18 }}>
+              <StatusEditor />
+            </div>
             <PlatformDesk />
           </>
         )}
@@ -446,7 +468,7 @@ function BusinessTable({ data, emailOf, onOpen }: { data: AdminData; emailOf: Ma
               <tr key={b.id} className="clickable" onClick={() => onOpen(b.id)}>
                 <td>
                   <div className="row">
-                    <span className="avatar">{industryById(b.industry).emoji}</span>
+                    <span className="avatar">{b.name.slice(0, 2).toUpperCase()}</span>
                     <span>
                       <strong>{b.name}</strong>
                       <small className="block">/b/{b.slug}</small>
@@ -872,6 +894,7 @@ function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: st
             </div>
             {tab === 'edit' && (
               <>
+                <BusinessCare id={id} early={!!(b as Record<string, unknown>).early_adopter} freeUntil={((b as Record<string, unknown>).free_until as string | null) || null} />
                 <p className="notice" style={{ fontSize: 12.5 }}>
                   {de
                     ? 'Hier änderst du alle Betriebsdaten direkt. Für Leistungen, Team, Arbeitszeiten, Kunden und Termine nutze oben „Alles bearbeiten (Supportmodus)“ – du arbeitest dann 2 Stunden mit Inhaber-Rechten im Dashboard des Betriebs. Jede Änderung wird protokolliert.'
@@ -1848,7 +1871,7 @@ function Waitlist({ action }: { action: ActionFn }) {
                 <tr key={l.id} className="clickable" onClick={() => setOpen(l)}>
                   <td>
                     <div className="row">
-                      <span className="avatar">{industryById(l.industry).emoji}</span>
+                      <span className="avatar">{l.company.slice(0, 2).toUpperCase()}</span>
                       <span>
                         <strong>{l.company}</strong>
                         <small className="block">{[industryById(l.industry)[de ? 'de' : 'en'], l.city].filter(Boolean).join(' · ')}</small>
@@ -1909,7 +1932,7 @@ function LeadDrawer({ lead, onClose, action, reload }: { lead: Lead; onClose: ()
           <div>
             <h2>{lead.company}</h2>
             <small className="muted">
-              {industryById(lead.industry).emoji} {industryById(lead.industry)[de ? 'de' : 'en']}
+              {industryById(lead.industry)[de ? 'de' : 'en']}
               {lead.city && ` · ${lead.city}`}
               {lead.team_size && ` · ${lead.team_size} ${de ? 'Personen' : 'people'}`} · {fmt(lead.created_at, locale)}
             </small>

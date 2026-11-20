@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { line } from '@/lib/sanitize';
 import { businessSchema } from '@/lib/validation';
-import { body, failure, json, requireUser, sameOrigin, softRateLimit } from '@/lib/http';
+import { body, failure, HttpError, json, requireUser, sameOrigin, softRateLimit } from '@/lib/http';
 import { hourPresets, industryById } from '@/lib/industries';
 import { logActivity } from '@/lib/activity';
 const extra = z.object({
@@ -22,6 +22,8 @@ export async function POST(request: Request) {
     sameOrigin(request);
     const { db, user } = await requireUser();
     await softRateLimit(request, 'business-create', 5);
+    const { data: isPlatformAdmin } = await db.rpc('my_platform_role');
+    if (isPlatformAdmin) throw new HttpError(403, 'ADMIN_MUST_BE_SEPARATE');
     const raw = await body(request);
     const options = extra.parse(raw);
     const input = businessSchema.parse({ ...raw, slug: raw.slug || slugify(String(raw.name || '')) });

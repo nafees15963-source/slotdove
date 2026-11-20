@@ -5,6 +5,7 @@ import { SettingsTabs, settingsSections } from './settings-tabs';
 import { SupportDesk } from './support';
 import { useI18n } from '../providers';
 import { Overview } from './overview';
+import { Wishes } from './wishes';
 import { Schedule } from './schedule';
 import { Availability } from './availability';
 import { Entities } from './entities';
@@ -48,6 +49,8 @@ export function PageContent({ section }: { section: string }) {
       return <Integrations />;
     case 'billing':
       return <Billing />;
+    case 'wishes':
+      return <Wishes />;
     default:
       return <Overview />;
   }

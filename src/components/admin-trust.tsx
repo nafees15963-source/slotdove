@@ -803,6 +803,9 @@ export function UserSecurity({ id, onChanged }: { id: string; onChanged: () => v
             2FA zurücksetzen
           </Button>
         )}
+        <Button size="sm" variant="outline" onClick={() => run({ action: 'user-trash' }, 'In den Papierkorb verschoben', 'Konto sperren und in den Papierkorb (14 Tage wiederherstellbar)? Eigene Betriebe gehen offline.')}>
+          In Papierkorb
+        </Button>
         <Button
           size="sm"
           variant="danger"
@@ -1014,12 +1017,546 @@ export function SignaturesDesk({ onUser }: { onUser: (id: string) => void }) {
               <br />
               Browser: {open.user_agent || '—'}
             </div>
-            <Button variant="outline" onClick={() => (onUser(open.user_id), setOpen(null))}>
-              Benutzer öffnen
-            </Button>
+<div className="row">
+              <Button variant="outline" onClick={() => (onUser(open.user_id), setOpen(null))}>
+                Benutzer öffnen
+              </Button>
+              <a className="btn btn-primary" href={`/admin/nachweis/${open.user_id}`} target="_blank" rel="noreferrer">
+                Nachweis drucken / PDF
+              </a>
+            </div>
           </div>
         )}
       </Dialog>
+    </div>
+  );
+}
+
+const mb = (bytes: number) => `${(bytes / 1048576).toLocaleString('de', { maximumFractionDigits: 1 })} MB`;
+function Meter({ label, value, max, text }: { label: string; value: number; max: number; text: string }) {
+  const pct = Math.min(100, Math.round((value / max) * 100));
+  return (
+    <div className="meter">
+      <div className="spread">
+        <span>{label}</span>
+        <span className="muted">{text}</span>
+      </div>
+      <div className={`meter-bar ${pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : ''}`}>
+        <span style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+/** Usage against the free plans (Supabase Free, Resend Free). */
+export function UsageCard() {
+  const [u] = useView<Record<string, number>>('view=usage');
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Kosten-Monitor (Gratis-Grenzen)</h2>
+      </div>
+      <div className="panel-body stack">
+        {!u ? (
+          <div className="skeleton" style={{ height: 120 }} />
+        ) : (
+          <>
+            <Meter label="Datenbank" value={u.db_bytes} max={500 * 1048576} text={`${mb(u.db_bytes)} von 500 MB`} />
+            <Meter label="Dateien (Logos, Bilder)" value={u.storage_bytes} max={1024 * 1048576} text={`${mb(u.storage_bytes)} von 1 GB · ${u.storage_files} Dateien`} />
+            <Meter label="E-Mails heute" value={u.emails_today} max={100} text={`${u.emails_today} von 100`} />
+            <Meter label="E-Mails diesen Monat" value={u.emails_month} max={3000} text={`${u.emails_month} von 3.000`} />
+            <small className="muted">
+              Fehlgeschlagene E-Mails (7 Tage): {u.emails_failed_7d} · {u.users} Konten · {u.businesses} Betriebe · {u.bookings} Termine. Grenzen: Supabase Free und Resend Free.
+            </small>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+type AdminRow = { user_id: string; email: string; created_at: string; last_sign_in_at: string | null };
+/** Separate admin accounts: create, list, remove. */
+export function AdminAccounts() {
+  const [d, load] = useView<{ me: string; admins: AdminRow[] }>('view=admins');
+  const [link, setLink] = useState('');
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Admin-Konten</h2>
+      </div>
+      <div className="panel-body stack">
+        <p className="muted" style={{ fontSize: 13 }}>
+          Admin-Konten sind vom Geschäftskonto getrennt: eigene E-Mail, eigenes Passwort, eigener Login unter /admin/login, Zwei-Faktor-Pflicht. Ein Admin-Konto kann keinen Betrieb besitzen und
+          kommt nur im Supportmodus in fremde Dashboards.
+        </p>
+        {(d?.admins || []).map((a) => (
+          <div className="spread admin-row" key={a.user_id}>
+            <span>
+              <strong>{a.email}</strong> {a.user_id === d?.me && <span className="badge">du</span>}
+              <br />
+              <small className="muted">letzter Login {fmt(a.last_sign_in_at)}</small>
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                const self = a.user_id === d?.me;
+                if (!confirm(self ? 'Dieses Konto als Admin entfernen? Du wirst danach abgemeldet. Melde dich dann mit dem anderen Admin-Konto an.' : `${a.email} die Admin-Rechte entziehen?`)) return;
+                const r = await post({ action: 'admin-remove', user_id: a.user_id }, 'Admin entfernt');
+                if (r?.self) {
+                  await api('/api/auth', 'POST', { action: 'logout' }).catch(() => null);
+                  location.href = '/admin/login';
+                } else load();
+              }}
+            >
+              Entfernen
+            </Button>
+          </div>
+        ))}
+        <form
+          className="row"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const email = String(new FormData(form).get('email') || '');
+            const r = await post({ action: 'admin-add', email }, 'Admin-Konto angelegt');
+            if (r) {
+              form.reset();
+              setLink(String(r.link || ''));
+              load();
+            }
+          }}
+        >
+          <input name="email" type="email" required placeholder="E-Mail für das neue Admin-Konto" aria-label="E-Mail" />
+          <Button type="submit">Admin anlegen</Button>
+        </form>
+        {link && (
+          <>
+            <small>Link zum Passwort-Setzen (einmalig, nur selbst öffnen – am besten in einem privaten Fenster):</small>
+            <pre className="secret-box" onClick={() => navigator.clipboard.writeText(link).then(() => toast.success('Kopiert'))}>
+              {link}
+            </pre>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+type TrashRow = { user_id: string; email: string; requested_at: string; purge_after: string; businesses: { id: string }[]; requested_by: string };
+/** 14-day trash for deleted accounts. */
+export function TrashDesk() {
+  const [d, load] = useView<{ entries: TrashRow[] }>('view=trash');
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Papierkorb – gelöschte Konten (14 Tage wiederherstellbar)</h2>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Konto</th>
+              <th>Gelöscht</th>
+              <th>Endgültig am</th>
+              <th>Betriebe</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {(d?.entries || []).map((t) => (
+              <tr key={t.user_id}>
+                <td>
+                  {t.email} <small className="muted">({t.requested_by === 'self' ? 'selbst' : 'Admin'})</small>
+                </td>
+                <td>{fmt(t.requested_at)}</td>
+                <td>{fmt(t.purge_after)}</td>
+                <td>{t.businesses.length}</td>
+                <td>
+                  <div className="row">
+                    <Button size="sm" variant="outline" onClick={async () => (await post({ action: 'trash-restore', user_id: t.user_id }, 'Wiederhergestellt'), load())}>
+                      Wiederherstellen
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        if (prompt('Sofort endgültig löschen? Tippe LÖSCHEN.') !== 'LÖSCHEN') return;
+                        await post({ action: 'trash-purge', user_id: t.user_id, confirm: 'LÖSCHEN' }, 'Endgültig gelöscht');
+                        load();
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!d?.entries.length && (
+              <tr>
+                <td colSpan={5} className="muted">
+                  Papierkorb ist leer.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+type WishRow = { id: string; title: string; description: string; status: string; admin_note: string; votes: number; created_at: string; businesses: { name: string } | null };
+const wishStatus: Record<string, string> = { new: 'Neu', planned: 'Geplant', in_progress: 'In Arbeit', done: 'Fertig', declined: 'Abgelehnt' };
+/** Feature wishes ranked by votes. */
+export function WishesDesk() {
+  const [d, load] = useView<{ wishes: WishRow[] }>('view=wishes');
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Wünsche der Betriebe ({d?.wishes.length || 0})</h2>
+      </div>
+      <div className="panel-body stack">
+        {(d?.wishes || []).map((w) => (
+          <form
+            key={w.id}
+            className="wish-admin"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const f = Object.fromEntries(new FormData(e.currentTarget));
+              await post({ action: 'wish-update', id: w.id, status: f.status, admin_note: f.admin_note }, 'Gespeichert');
+              load();
+            }}
+          >
+            <div className="wish-votes">{w.votes}</div>
+            <div className="grow stack" style={{ gap: 6 }}>
+              <strong>{w.title}</strong>
+              {w.description && <small className="muted">{w.description}</small>}
+              <small className="muted">
+                {w.businesses?.name || '—'} · {fmt(w.created_at)}
+              </small>
+              <div className="row wrap">
+                <select name="status" defaultValue={w.status} aria-label="Status">
+                  {Object.entries(wishStatus).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+                <input name="admin_note" defaultValue={w.admin_note} maxLength={1000} placeholder="Öffentliche Antwort (optional)" aria-label="Antwort" />
+                <Button size="sm" type="submit">
+                  Speichern
+                </Button>
+                <Button size="sm" type="button" variant="ghost" onClick={async () => confirm('Wunsch löschen?') && (await post({ action: 'wish-delete', id: w.id }, 'Gelöscht'), load())}>
+                  <Trash2 size={13} />
+                </Button>
+              </div>
+            </div>
+          </form>
+        ))}
+        {!d?.wishes.length && <p className="muted">Noch keine Wünsche.</p>}
+      </div>
+    </section>
+  );
+}
+
+type Snippet = { id: string; title: string; body: string; category: string };
+/** Reply snippets with {name} placeholder; one click copies the filled text. */
+export function SnippetsDesk() {
+  const [d, load] = useView<{ snippets: Snippet[] }>('view=snippets');
+  const [edit, setEdit] = useState<Partial<Snippet> | null>(null);
+  const [name, setName] = useState('');
+  return (
+    <div className="stack">
+      <section className="panel">
+        <div className="panel-head spread">
+          <h2 className="panel-title">Textbausteine</h2>
+          <div className="row">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name für {name}" aria-label="Name einsetzen" style={{ maxWidth: 200 }} />
+            <Button size="sm" onClick={() => setEdit({ category: 'allgemein' })}>
+              Neuer Baustein
+            </Button>
+          </div>
+        </div>
+        <div className="snippet-grid">
+          {(d?.snippets || []).map((s) => (
+            <div className="snippet" key={s.id}>
+              <div className="spread">
+                <strong>{s.title}</strong>
+                <span className="badge">{s.category}</span>
+              </div>
+              <p>{s.body.slice(0, 180)}{s.body.length > 180 ? '…' : ''}</p>
+              <div className="row">
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    navigator.clipboard.writeText(s.body.replaceAll('{name}', name || 'zusammen')).then(() => toast.success('Kopiert – jetzt einfügen'))
+                  }
+                >
+                  Kopieren
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEdit(s)}>
+                  Bearbeiten
+                </Button>
+                <Button size="sm" variant="ghost" onClick={async () => confirm('Baustein löschen?') && (await post({ action: 'snippet-delete', id: s.id }, 'Gelöscht'), load())}>
+                  <Trash2 size={13} />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+      <Dialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)} title={edit?.id ? 'Baustein bearbeiten' : 'Neuer Baustein'}>
+        {edit && (
+          <form
+            className="form-grid"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const f = Object.fromEntries(new FormData(e.currentTarget));
+              if (await post({ action: 'snippet-save', id: edit.id, title: f.title, category: f.category, body: f.body })) {
+                setEdit(null);
+                load();
+              }
+            }}
+          >
+            <div className="field">
+              <label htmlFor="sn-t">Titel</label>
+              <input id="sn-t" name="title" required minLength={2} maxLength={120} defaultValue={edit.title} />
+            </div>
+            <div className="field">
+              <label htmlFor="sn-c">Kategorie</label>
+              <input id="sn-c" name="category" maxLength={40} defaultValue={edit.category} />
+            </div>
+            <div className="field full">
+              <label htmlFor="sn-b">Text ({'{name}'} wird ersetzt)</label>
+              <textarea id="sn-b" name="body" required rows={10} maxLength={5000} defaultValue={edit.body} />
+            </div>
+            <Button type="submit">Speichern</Button>
+          </form>
+        )}
+      </Dialog>
+    </div>
+  );
+}
+
+type Authority = { id: string; case_number: string; authority: string; reference: string; legal_basis: string; scope: string; disclosed: string; status: string; received_at: string; due_at: string | null; notes: string };
+const authStatus: Record<string, string> = { new: 'Neu', in_review: 'In Prüfung', answered: 'Beantwortet', rejected: 'Abgelehnt' };
+/** Requests from police, courts and other authorities (Art. 10 DSA). */
+export function AuthorityDesk() {
+  const [d, load] = useView<{ requests: Authority[] }>('view=authority');
+  const [edit, setEdit] = useState<Partial<Authority> | null>(null);
+  return (
+    <section className="panel">
+      <div className="panel-head spread">
+        <h2 className="panel-title">Behördenanfragen</h2>
+        <Button size="sm" onClick={() => setEdit({ status: 'new' })}>
+          Anfrage erfassen
+        </Button>
+      </div>
+      <div className="panel-body">
+        <p className="muted" style={{ fontSize: 12.5 }}>
+          Nur gegen schriftliche Anfrage mit Rechtsgrundlage und Aktenzeichen herausgeben. Bei Unsicherheit Rückruf über die offizielle Telefonnummer der Behörde. Nur die angefragten Daten herausgeben
+          und hier dokumentieren (Art. 10 DSA).
+        </p>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fall</th>
+              <th>Behörde</th>
+              <th>Aktenzeichen</th>
+              <th>Status</th>
+              <th>Eingang</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(d?.requests || []).map((r) => (
+              <tr key={r.id} onClick={() => setEdit(r)} style={{ cursor: 'pointer' }}>
+                <td>
+                  <strong>{r.case_number}</strong>
+                </td>
+                <td>{r.authority}</td>
+                <td>{r.reference || '—'}</td>
+                <td>{authStatus[r.status]}</td>
+                <td>{fmt(r.received_at)}</td>
+              </tr>
+            ))}
+            {!d?.requests.length && (
+              <tr>
+                <td colSpan={5} className="muted">
+                  Keine Anfragen.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <Dialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)} title={edit?.case_number || 'Behördenanfrage'}>
+        {edit && (
+          <form
+            className="form-grid"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const f = Object.fromEntries(new FormData(e.currentTarget));
+              if (await post({ action: 'authority-save', id: edit.id, ...f })) {
+                setEdit(null);
+                load();
+              }
+            }}
+          >
+            <div className="field">
+              <label htmlFor="au-a">Behörde</label>
+              <input id="au-a" name="authority" required minLength={2} maxLength={200} defaultValue={edit.authority} placeholder="z. B. Polizeidirektion Lübeck" />
+            </div>
+            <div className="field">
+              <label htmlFor="au-r">Aktenzeichen</label>
+              <input id="au-r" name="reference" maxLength={120} defaultValue={edit.reference} />
+            </div>
+            <div className="field">
+              <label htmlFor="au-l">Rechtsgrundlage</label>
+              <input id="au-l" name="legal_basis" maxLength={300} defaultValue={edit.legal_basis} placeholder="z. B. § 100j StPO, Gerichtsbeschluss" />
+            </div>
+            <div className="field">
+              <label htmlFor="au-d">Frist</label>
+              <input id="au-d" name="due_at" type="date" defaultValue={edit.due_at?.slice(0, 10) || ''} />
+            </div>
+            <div className="field full">
+              <label htmlFor="au-s">Was wird angefragt?</label>
+              <textarea id="au-s" name="scope" maxLength={4000} defaultValue={edit.scope} />
+            </div>
+            <div className="field full">
+              <label htmlFor="au-x">Was wurde herausgegeben?</label>
+              <textarea id="au-x" name="disclosed" maxLength={4000} defaultValue={edit.disclosed} />
+            </div>
+            <div className="field">
+              <label htmlFor="au-st">Status</label>
+              <select id="au-st" name="status" defaultValue={edit.status}>
+                {Object.entries(authStatus).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field full">
+              <label htmlFor="au-n">Notizen</label>
+              <textarea id="au-n" name="notes" maxLength={4000} defaultValue={edit.notes} />
+            </div>
+            <Button type="submit">Speichern</Button>
+          </form>
+        )}
+      </Dialog>
+    </section>
+  );
+}
+
+/** Public status page message. */
+export function StatusEditor() {
+  const [d, load] = useView<{ settings: Record<string, { level?: string; message?: string }> }>('view=settings');
+  const st = d?.settings.status || {};
+  return (
+    <section className="panel">
+      <div className="panel-head spread">
+        <h2 className="panel-title">Statusseite</h2>
+        <a className="btn btn-ghost btn-sm" href={'/status'} target="_blank" rel="noreferrer">
+          /status öffnen
+        </a>
+      </div>
+      <form
+        className="panel-body form-grid"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const f = Object.fromEntries(new FormData(e.currentTarget));
+          if (await post({ action: 'status', level: f.level, message: f.message }, 'Status gespeichert')) load();
+        }}
+      >
+        <div className="field">
+          <label htmlFor="st-l">Zustand</label>
+          <select id="st-l" name="level" defaultValue={st.level || 'ok'} key={st.level || 'ok'}>
+            <option value="ok">Alles läuft</option>
+            <option value="degraded">Eingeschränkt</option>
+            <option value="down">Störung</option>
+          </select>
+        </div>
+        <div className="field full">
+          <label htmlFor="st-m">Meldung (öffentlich)</label>
+          <input id="st-m" name="message" maxLength={300} defaultValue={st.message || ''} key={st.message || ''} placeholder="z. B. E-Mails kommen gerade verzögert an." />
+        </div>
+        <Button type="submit">Speichern</Button>
+      </form>
+    </section>
+  );
+}
+
+type Warning = { id: string; level: number; reason: string; notified: boolean; created_at: string };
+/** Graduated warnings inside the business drawer, plus early-adopter flag and individual free period. */
+export function BusinessCare({ id, early, freeUntil }: { id: string; early: boolean; freeUntil: string | null }) {
+  const [d, load] = useView<{ warnings: Warning[] }>(`view=warnings&business=${id}`);
+  const next = Math.min(3, (d?.warnings.length ? Math.max(...d.warnings.map((w) => w.level)) : 0) + 1);
+  return (
+    <div className="stack">
+      <form
+        className="care-box"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const f = Object.fromEntries(new FormData(e.currentTarget));
+          await post({ action: 'business-flags', id, early_adopter: f.early === 'on', free_until: String(f.free_until || '') }, 'Gespeichert');
+        }}
+      >
+        <strong>Testphase</strong>
+        <label className="check-label">
+          <input type="checkbox" name="early" defaultChecked={early} /> Early Adopter (früh dabei – später bevorzugt behandeln)
+        </label>
+        <div className="row">
+          <label htmlFor={`fu-${id}`} className="muted" style={{ fontSize: 13 }}>
+            Kostenlos bis (nur dieser Betrieb):
+          </label>
+          <input id={`fu-${id}`} name="free_until" type="date" defaultValue={freeUntil || ''} />
+          <Button size="sm" type="submit">
+            Speichern
+          </Button>
+        </div>
+      </form>
+      <form
+        className="care-box"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const f = Object.fromEntries(new FormData(form));
+          const level = Number(f.level);
+          if (level === 3 && !confirm('Stufe 3 sperrt den Betrieb sofort. Fortfahren?')) return;
+          if (await post({ action: 'warn', business_id: id, level, reason: f.reason, notify: f.notify === 'on' }, 'Verwarnung gespeichert')) {
+            form.reset();
+            load();
+          }
+        }}
+      >
+        <strong>Verwarnungen</strong>
+        {(d?.warnings || []).map((w) => (
+          <div key={w.id} className="warn-row">
+            <span className={`badge ${w.level === 3 ? 'badge-red' : w.level === 2 ? 'badge-yellow' : ''}`}>Stufe {w.level}</span>
+            <span className="grow">{w.reason}</span>
+            <small className="muted">
+              {fmt(w.created_at)} {w.notified ? '· per E-Mail' : ''}
+            </small>
+          </div>
+        ))}
+        <div className="row">
+          <select name="level" defaultValue={next} key={next} aria-label="Stufe">
+            <option value={1}>1 – Hinweis</option>
+            <option value={2}>2 – Verwarnung</option>
+            <option value={3}>3 – Sperrung</option>
+          </select>
+          <label className="check-label">
+            <input type="checkbox" name="notify" defaultChecked /> Betrieb per E-Mail begründet informieren
+          </label>
+        </div>
+        <textarea name="reason" required minLength={10} maxLength={2000} rows={3} placeholder="Konkrete Begründung: was, wann, gegen welche Regel (§ der Nutzungsbedingungen)" aria-label="Begründung" />
+        <Button size="sm" type="submit" variant="danger">
+          Verwarnung aussprechen
+        </Button>
+      </form>
     </div>
   );
 }

@@ -434,6 +434,32 @@ export async function GET(request: Request, context: Context) {
     const { id, resource } = await context.params;
     const { db } = await requireBusiness(id, !['calendar-export', 'bookings'].includes(resource));
     const url = new URL(request.url);
+    if (resource === 'history') {
+      // Change log for owners/admins: who changed what in this business (last 90 days).
+      const { role } = await requireBusiness(id);
+      if (!['owner', 'admin'].includes(role)) throw new HttpError(403, 'FORBIDDEN');
+      const admin = supabaseAdmin();
+      const since = new Date(Date.now() - 90 * 86400000).toISOString();
+      const { data: rows, error } = await admin
+        .from('activity_log')
+        .select('action,details,created_at,user_id')
+        .eq('business_id', id)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      const ids = [...new Set((rows || []).map((r) => r.user_id).filter(Boolean))] as string[];
+      const { data: people } = ids.length ? await admin.from('profiles').select('id,name').in('id', ids) : { data: [] };
+      const names = new Map((people || []).map((p) => [p.id, p.name]));
+      return json({
+        entries: (rows || []).map((r) => ({
+          action: r.action,
+          at: r.created_at,
+          who: r.user_id ? names.get(r.user_id) || 'Teammitglied' : r.action.startsWith('customer.') ? 'Kunde (online)' : 'System',
+          detail: (r.details as Record<string, unknown>)?.booking_number || (r.details as Record<string, unknown>)?.customer || '',
+        })),
+      });
+    }
     if (resource === 'analytics') {
       const from = z.iso.datetime({ offset: true }).parse(url.searchParams.get('from')),
         to = z.iso.datetime({ offset: true }).parse(url.searchParams.get('to'));

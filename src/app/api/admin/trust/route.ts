@@ -6,6 +6,7 @@ import { generatePassword, LEGAL_VERSION } from '@/lib/trust';
 import { text } from '@/lib/sanitize';
 import { csv } from '@/lib/utils';
 import { safeSupportUrl } from '@/lib/release';
+import { purgeAccount, restoreAccount, trashAccount } from '@/lib/trash';
 
 /** Trust & safety, GDPR requests, blocklist, statistics, platform switches and user security actions. */
 const audit = (actor: string, action: string, details: Record<string, unknown>, business_id?: string | null) =>
@@ -151,6 +152,52 @@ export async function GET(request: Request) {
           headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="slotdove-unterschriften.csv"', 'Cache-Control': 'private, no-store' },
         });
       return json({ version: LEGAL_VERSION, rows, missing });
+    }
+    if (view === 'admins') {
+      const { user } = await requireAdmin();
+      const [{ data, error }, users] = await Promise.all([db.rpc('admin_list_platform_admins', { p_actor: user.id }), db.auth.admin.listUsers({ page: 1, perPage: 1000 })]);
+      if (error) throw error;
+      const byId = new Map((users.data?.users || []).map((u) => [u.id, u]));
+      return json({
+        me: user.id,
+        admins: ((data || []) as { user_id: string; created_at: string }[]).map((a) => ({
+          ...a,
+          email: byId.get(a.user_id)?.email || '—',
+          last_sign_in_at: byId.get(a.user_id)?.last_sign_in_at || null,
+        })),
+      });
+    }
+    if (view === 'trash') {
+      const { data, error } = await db.from('account_deletions').select('*').order('requested_at', { ascending: false });
+      if (error) throw error;
+      return json({ entries: data });
+    }
+    if (view === 'wishes') {
+      const { data, error } = await db.from('feature_requests').select('*,businesses(name)').order('votes', { ascending: false }).order('created_at', { ascending: false }).limit(500);
+      if (error) throw error;
+      return json({ wishes: data });
+    }
+    if (view === 'snippets') {
+      const { data, error } = await db.from('admin_snippets').select('*').order('category').order('title');
+      if (error) throw error;
+      return json({ snippets: data });
+    }
+    if (view === 'usage') {
+      const { user } = await requireAdmin();
+      const { data, error } = await db.rpc('admin_usage', { p_actor: user.id });
+      if (error) throw error;
+      return json(data);
+    }
+    if (view === 'warnings') {
+      const id = z.uuid().parse(url.searchParams.get('business'));
+      const { data, error } = await db.from('business_warnings').select('*').eq('business_id', id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return json({ warnings: data });
+    }
+    if (view === 'authority') {
+      const { data, error } = await db.from('authority_requests').select('*').order('received_at', { ascending: false }).limit(500);
+      if (error) throw error;
+      return json({ requests: data });
     }
     if (view === 'audit-csv') {
       const { data, error } = await db.from('admin_audit_logs').select('*').order('created_at', { ascending: false }).limit(10000);
@@ -362,6 +409,149 @@ export async function POST(request: Request) {
       }
       await audit(user.id, 'platform.broadcast', { subject: v.subject, recipients: recipients.length, sent, test: v.test });
       return json({ ok: true, recipients: recipients.length, sent });
+    }
+
+    if (action === 'admin-add') {
+      const email = z.email().max(254).parse(input.email).toLowerCase();
+      const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      let target = list?.users.find((u) => u.email?.toLowerCase() === email) || null;
+      let link: string | null = null;
+      if (!target) {
+        const created = await db.auth.admin.createUser({ email, password: generatePassword(24), email_confirm: true, app_metadata: { created_by_admin: user.id, admin_account: true } });
+        if (created.error || !created.data.user) throw created.error || new HttpError(500, 'INTERNAL_ERROR');
+        target = created.data.user;
+      }
+      const { error } = await db.rpc('admin_set_platform_admin', { p_actor: user.id, p_user: target.id, p_add: true });
+      if (error) {
+        if (/ADMIN_MUST_BE_SEPARATE/.test(error.message)) throw new HttpError(409, 'ADMIN_MUST_BE_SEPARATE');
+        throw error;
+      }
+      const recovery = await db.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: `${new URL(request.url).origin}/auth/callback?next=/account/password` } });
+      link = recovery.data?.properties?.action_link || null;
+      return json({ user_id: target.id, link });
+    }
+    if (action === 'admin-remove') {
+      const id = z.uuid().parse(input.user_id);
+      const { error } = await db.rpc('admin_set_platform_admin', { p_actor: user.id, p_user: id, p_add: false });
+      if (error) {
+        if (/LAST_ADMIN/.test(error.message)) throw new HttpError(409, 'LAST_ADMIN');
+        throw error;
+      }
+      return json({ ok: true, self: id === user.id });
+    }
+
+    if (action === 'trash-restore') {
+      const id = z.uuid().parse(input.user_id);
+      if (!(await restoreAccount(id, user.id))) throw new HttpError(404, 'NOT_FOUND');
+      return json({ ok: true });
+    }
+    if (action === 'trash-purge') {
+      const id = z.uuid().parse(input.user_id);
+      if (input.confirm !== 'LÖSCHEN') throw new HttpError(400, 'CONFIRMATION_REQUIRED');
+      await purgeAccount(id);
+      await audit(user.id, 'account.purged_by_admin', { user_id: id });
+      return json({ ok: true });
+    }
+    if (action === 'user-trash') {
+      const id = z.uuid().parse(input.user_id);
+      if (id === user.id) throw new HttpError(400, 'INVALID_INPUT');
+      const { data: u } = await db.auth.admin.getUserById(id);
+      if (!u.user) throw new HttpError(404, 'NOT_FOUND');
+      await trashAccount(id, u.user.email || '', 'admin');
+      await audit(user.id, 'account.trashed_by_admin', { user_id: id });
+      return json({ ok: true });
+    }
+    if (action === 'wish-update') {
+      const v = z.object({ id: z.uuid(), status: z.enum(['new', 'planned', 'in_progress', 'done', 'declined']), admin_note: text(1000).default('') }).parse(input);
+      const { error } = await db.from('feature_requests').update({ status: v.status, admin_note: v.admin_note, updated_at: new Date().toISOString() }).eq('id', v.id);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+    if (action === 'wish-delete') {
+      const { error } = await db.from('feature_requests').delete().eq('id', z.uuid().parse(input.id));
+      if (error) throw error;
+      return json({ ok: true });
+    }
+    if (action === 'snippet-save') {
+      const v = z.object({ id: z.uuid().optional(), title: z.string().trim().min(2).max(120), category: z.string().trim().max(40).default('allgemein'), body: z.string().min(2).max(5000) }).parse(input);
+      const row = { title: v.title, category: v.category || 'allgemein', body: v.body, updated_at: new Date().toISOString() };
+      const { error } = v.id ? await db.from('admin_snippets').update(row).eq('id', v.id) : await db.from('admin_snippets').insert(row);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+    if (action === 'snippet-delete') {
+      const { error } = await db.from('admin_snippets').delete().eq('id', z.uuid().parse(input.id));
+      if (error) throw error;
+      return json({ ok: true });
+    }
+    if (action === 'business-flags') {
+      const v = z.object({ id: z.uuid(), early_adopter: z.boolean(), free_until: z.union([z.iso.date(), z.literal('')]) }).parse(input);
+      const { error } = await db.from('businesses').update({ early_adopter: v.early_adopter, free_until: v.free_until || null }).eq('id', v.id);
+      if (error) throw error;
+      await audit(user.id, 'business.flags', { early_adopter: v.early_adopter, free_until: v.free_until || null }, v.id);
+      return json({ ok: true });
+    }
+    if (action === 'warn') {
+      const v = z.object({ business_id: z.uuid(), level: z.number().int().min(1).max(3), reason: text(2000).pipe(z.string().min(10)), notify: z.boolean().default(true) }).parse(input);
+      const { data: b } = await db.from('businesses').select('id,name,email,locale').eq('id', v.business_id).single();
+      if (!b) throw new HttpError(404, 'NOT_FOUND');
+      let notified = false;
+      if (v.notify && b.email) {
+        const label = ['Hinweis', 'Verwarnung', 'Sperrung'][v.level - 1];
+        const r = await sendEmail({
+          ...noticeEmail({
+            locale: 'de',
+            title: `${label} zu deinem Slotdove-Konto „${b.name}“`,
+            lines: [
+              'Hallo,',
+              v.level === 3
+                ? 'deine Buchungsseite und dein Konto wurden vorläufig gesperrt.'
+                : v.level === 2
+                  ? 'wir müssen dich formell verwarnen. Bei einem weiteren Verstoß kann dein Konto gesperrt werden.'
+                  : 'wir möchten dich auf ein Problem hinweisen.',
+              `Begründung: ${v.reason}`,
+              'Die Entscheidung beruht auf unseren Nutzungsbedingungen (§ 9, § 10) und wurde von einem Menschen getroffen. Du kannst innerhalb von sechs Monaten durch Antwort auf diese E-Mail widersprechen; der Rechtsweg bleibt offen.',
+            ],
+          }),
+          to: b.email,
+          idempotencyKey: `warn-${v.business_id}-${Date.now()}`,
+        }).catch(() => ({ state: 'failed' as const }));
+        notified = r.state === 'accepted';
+      }
+      const { error } = await db.from('business_warnings').insert({ business_id: v.business_id, level: v.level, reason: v.reason, created_by: user.id, notified });
+      if (error) throw error;
+      if (v.level === 3) await db.from('businesses').update({ status: 'suspended', published: false }).eq('id', v.business_id);
+      await audit(user.id, 'business.warned', { level: v.level, notified }, v.business_id);
+      return json({ ok: true, notified });
+    }
+    if (action === 'authority-save') {
+      const v = z
+        .object({
+          id: z.uuid().optional(),
+          authority: z.string().trim().min(2).max(200),
+          reference: z.string().max(120).default(''),
+          legal_basis: z.string().max(300).default(''),
+          scope: text(4000).default(''),
+          disclosed: text(4000).default(''),
+          status: z.enum(['new', 'in_review', 'answered', 'rejected']).default('new'),
+          due_at: z.union([z.iso.date(), z.literal('')]).default(''),
+          notes: text(4000).default(''),
+        })
+        .parse(input);
+      const { id, due_at, ...rest } = v;
+      const row = { ...rest, due_at: due_at || null, updated_at: new Date().toISOString() };
+      const { error } = id ? await db.from('authority_requests').update(row).eq('id', id) : await db.from('authority_requests').insert({ ...row, created_by: user.id });
+      if (error) throw error;
+      await audit(user.id, 'authority.saved', { status: v.status, authority: v.authority });
+      return json({ ok: true });
+    }
+    if (action === 'status') {
+      const v = z.object({ level: z.enum(['ok', 'degraded', 'down']), message: z.string().max(300).default('') }).parse(input);
+      const value = { level: v.level, message: v.message.replace(/[<>]/g, '').trim(), updated_at: new Date().toISOString() };
+      const { error } = await db.from('platform_settings').upsert({ key: 'status', value, updated_by: user.id, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      await audit(user.id, 'platform.status', value);
+      return json({ ok: true });
     }
 
     // ---- User security actions ----

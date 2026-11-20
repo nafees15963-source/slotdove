@@ -78,6 +78,7 @@ export async function MarketingFooter() {
               <Link href="/impressum">{t.legal}</Link>
               <Link href="/avv">AVV</Link>
               <Link href="/unterstuetzen">{t.legal === 'Impressum' ? 'Unterstützen' : 'Support us'}</Link>
+              <Link href="/status">Status</Link>
               <Link href="/melden">{t.legal === 'Impressum' ? 'Inhalte melden' : 'Report content'}</Link>
             </div>
           </div>

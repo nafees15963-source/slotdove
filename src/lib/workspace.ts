@@ -17,18 +17,22 @@ export async function loadWorkspace(businessId?: string) {
   if (membershipError) throw new Error('WORKSPACE_UNAVAILABLE');
   const { data: supportBusiness } = await db.rpc('my_support_business');
   const { data: profile } = await db.from('profiles').select('tutorials_off').eq('id', user.id).maybeSingle();
-  const memberIds = [...(memberships || []).map((m) => m.business_id), ...(supportBusiness ? [supportBusiness as string] : [])];
-  const { data: businesses, error } = await db
-    .from('businesses')
-    .select('*')
-    .or(`owner_id.eq.${user.id}${memberIds.length ? `,id.in.(${memberIds.join(',')})` : ''}`)
+  // Admin accounts are separate from business accounts: they only enter the dashboard
+  // of the business they are supporting (time-limited, audited support session).
+  const { data: isPlatformAdmin } = await db.rpc('my_platform_role');
+  if (isPlatformAdmin && !supportBusiness) redirect('/admin');
+  const memberIds = isPlatformAdmin
+    ? [supportBusiness as string]
+    : [...(memberships || []).map((m) => m.business_id), ...(supportBusiness ? [supportBusiness as string] : [])];
+  const base = db.from('businesses').select('*');
+  const { data: businesses, error } = await (isPlatformAdmin
+    ? base.eq('id', supportBusiness as string)
+    : base.or(`owner_id.eq.${user.id}${memberIds.length ? `,id.in.(${memberIds.join(',')})` : ''}`)
+  )
     .order('created_at')
     .limit(100);
   if (error) throw new Error('WORKSPACE_UNAVAILABLE');
-  if (!businesses?.length) {
-    const { data: platformAdmin } = await db.rpc('my_platform_role');
-    redirect(platformAdmin ? '/admin' : '/onboarding');
-  }
+  if (!businesses?.length) redirect(isPlatformAdmin ? '/admin' : '/onboarding');
   const selected = businessId || (supportBusiness as string | null) || (await cookies()).get('slotdove-business')?.value;
   const business = (businesses.find((b) => b.id === selected) || businesses[0]) as Business;
   const { data: role } = await db.rpc('my_business_role', { bid: business.id });
@@ -96,6 +100,7 @@ export async function loadWorkspace(businessId?: string) {
     .map((f) => f.key);
   if (err) throw new Error('WORKSPACE_UNAVAILABLE');
   return {
+    supportMode: !!isPlatformAdmin,
     user: { id: user.id, email: user.email || '' },
     tutorialsOff: !!profile?.tutorials_off,
     mustChangePassword: !!user.app_metadata?.must_change_password,

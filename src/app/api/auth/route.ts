@@ -11,6 +11,7 @@ const schema = z.object({
   name: z.string().min(2).max(100).optional(),
   legal: z.boolean().optional(),
   invite: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),
+  portal: z.enum(['business', 'admin']).default('business'),
 });
 export async function POST(request: Request) {
   try {
@@ -42,7 +43,14 @@ export async function POST(request: Request) {
         await logActivity(request, { action: 'auth.login_failed', details: { email: input.email.toLowerCase() } });
         throw new HttpError(400, 'INVALID_CREDENTIALS');
       }
-      await logActivity(request, { user_id: data.user?.id, action: 'auth.login' });
+      // Two separate logins: admin accounts only via /admin/login, business accounts only via /login.
+      const { data: isPlatformAdmin } = await db.rpc('my_platform_role');
+      if (!!isPlatformAdmin !== (input.portal === 'admin')) {
+        await db.auth.signOut();
+        await logActivity(request, { user_id: data.user?.id, action: 'auth.wrong_portal', details: { portal: input.portal } });
+        throw new HttpError(403, input.portal === 'admin' ? 'WRONG_PORTAL_BUSINESS' : 'WRONG_PORTAL_ADMIN');
+      }
+      await logActivity(request, { user_id: data.user?.id, action: input.portal === 'admin' ? 'auth.admin_login' : 'auth.login' });
       return json({ ok: true });
     }
     if (input.action === 'signup') {

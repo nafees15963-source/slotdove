@@ -4362,3 +4362,32 @@ code.num {
 .dark .sign-preview { color: var(--accent); }
 .sign-mini { font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 20px; color: var(--deep); }
 .footer-project { font-size: 12px; opacity: .75; margin: 18px 0 0; max-width: 760px; line-height: 1.5; }
+
+/* Status page */
+.status-hero { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 14px; font-size: 18px; margin: 10px 0 18px; }
+.status-hero .status-dot { width: 12px; height: 12px; border-radius: 99px; background: currentColor; }
+.status-ok { background: #e6f6ef; color: #146c43; }
+.status-degraded { background: #fff4d6; color: #8a5a00; }
+.status-down { background: #fde8e8; color: #a61b1b; }
+
+/* Printable signature proof */
+.proof { max-width: 820px; margin: 0 auto; padding: 40px 24px; background: #fff; color: #111; font-size: 13px; line-height: 1.5; }
+.proof h1 { font-size: 22px; margin-bottom: 6px; }
+.proof h2 { font-size: 15px; margin: 22px 0 8px; }
+.proof table { width: 100%; border-collapse: collapse; }
+.proof th, .proof td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
+.proof .meta { color: #555; font-size: 11.5px; margin-top: 10px; }
+.proof-actions { display: flex; justify-content: flex-end; margin-bottom: 18px; }
+@media print { .proof-actions { display: none; } .proof { padding: 0; } body { background: #fff !important; } .maintenance-banner { display: none; } }
+
+/* Wishes & history */
+.wish-form { display: grid; gap: 10px; }
+.wish-list { display: grid; gap: 10px; }
+.wish { display: flex; gap: 14px; padding: 14px 16px; align-items: flex-start; }
+.wish p { margin: 4px 0 0; font-size: 13px; }
+.wish-vote { display: grid; justify-items: center; min-width: 48px; padding: 6px 4px; border-radius: 10px; border: 1px solid var(--line, #d8e3e3); background: transparent; color: inherit; cursor: pointer; }
+.wish-vote.on { border-color: var(--purple); color: var(--purple); background: color-mix(in srgb, var(--purple) 8%, transparent); }
+.wish-note { font-size: 12.5px; padding: 6px 10px; border-left: 2px solid var(--purple); background: var(--surface-2, #eef5f5); border-radius: 0 8px 8px 0; }
+.history-list { display: grid; gap: 2px; max-height: 420px; overflow: auto; margin-top: 8px; }
+.history-row { display: grid; grid-template-columns: 120px 1fr; gap: 12px; padding: 7px 4px; border-bottom: 1px solid var(--line, #e3ecec); font-size: 13px; }
+.history-row time { color: var(--muted, #6b8285); font-variant-numeric: tabular-nums; }

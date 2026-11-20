@@ -82,7 +82,12 @@ export async function requireBusiness(id: string, manager = true) {
   const { data: role, error } = await db.rpc('my_business_role', { bid: id });
   if (error || !role || (manager && !['owner', 'admin'].includes(role)))
     throw new HttpError(403, 'FORBIDDEN');
-  if (!(await hasSignedTerms(user.id))) throw new HttpError(403, 'TERMS_REQUIRED');
+  const { data: isPlatformAdmin } = await db.rpc('my_platform_role');
+  if (isPlatformAdmin) {
+    // Admin accounts act on a business only inside an active support session.
+    const { data: supported } = await db.rpc('my_support_business');
+    if (supported !== id) throw new HttpError(403, 'ADMIN_USE_SUPPORT_MODE');
+  } else if (!(await hasSignedTerms(user.id))) throw new HttpError(403, 'TERMS_REQUIRED');
   return { db, user, role: role as 'owner' | 'admin' | 'staff' };
 }
 /** Admins must confirm a second factor (TOTP) unless ADMIN_MFA=off is set as an emergency switch. */

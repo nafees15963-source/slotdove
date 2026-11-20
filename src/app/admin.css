@@ -1,0 +1,351 @@
+/* ==========================================================================
+   Admin console – calm, professional tool look.
+   Neutral greys, hairlines instead of shadows, compact type, brand colour only
+   as an accent. Scoped to the admin so the customer-facing app is unaffected.
+   ========================================================================== */
+.admin-shell,
+body:has(.admin-shell) .dialog-content,
+body:has(.admin-shell) .dialog-overlay {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --soft: #f3f3f5;
+  --ink: #18181b;
+  --ink-2: #3f3f46;
+  --muted: #71717a;
+  --line: #e7e7ea;
+  --line-strong: #d4d4d8;
+  --purple: #0d7f79;
+  --purple-dark: #0a6964;
+  --purple-soft: #e7f4f2;
+  --focus: #0d7f7940;
+  --radius: 10px;
+  --shadow: none;
+  --shadow-lg: 0 0 0 1px #18181b0f, 0 16px 40px #18181b1f;
+}
+.dark .admin-shell,
+.dark body:has(.admin-shell) .dialog-content,
+body.dark:has(.admin-shell) .dialog-content {
+  --bg: #0b0c0d;
+  --surface: #121315;
+  --soft: #1a1b1e;
+  --ink: #ececef;
+  --ink-2: #c4c4cb;
+  --muted: #8d8d97;
+  --line: #24252a;
+  --line-strong: #33343a;
+  --purple: #3fd0be;
+  --purple-soft: #12302d;
+  --focus: #3fd0be40;
+  --shadow-lg: 0 0 0 1px #ffffff12, 0 16px 40px #0009;
+}
+
+.admin-shell {
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: -0.003em;
+  grid-template-columns: 240px minmax(0, 1fr);
+  font-feature-settings: 'cv11', 'ss01';
+}
+.admin-shell .muted,
+.admin-shell small.muted { color: var(--muted); }
+
+/* ---------- Sidebar ---------- */
+.admin-shell .admin-side {
+  background: var(--surface);
+  color: var(--ink-2);
+  border-right: 1px solid var(--line);
+  padding: 16px 10px;
+  gap: 8px;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.admin-shell .admin-brand { padding: 4px 10px 12px; }
+.admin-shell .admin-brand .brand { color: var(--ink); font-size: 17px; }
+.admin-shell .admin-brand .badge {
+  background: var(--soft);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 11px;
+}
+.admin-shell .admin-nav-group {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 14px 10px 4px;
+}
+.admin-shell .admin-nav {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: 450;
+  gap: 9px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.admin-shell .admin-nav svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+@media (hover: hover) and (pointer: fine) {
+  .admin-shell .admin-nav:hover { background: var(--soft); color: var(--ink); }
+}
+.admin-shell .admin-nav.on {
+  background: var(--soft);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--purple);
+}
+.admin-shell .admin-nav.on svg { color: var(--purple); }
+.admin-shell .admin-count {
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+.admin-shell .admin-side-bottom { border-top: 1px solid var(--line); padding-top: 8px; }
+
+/* ---------- Main + header ---------- */
+.admin-shell .admin-main { padding: 0 36px 64px; }
+.admin-shell .admin-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 -36px 24px;
+  padding: 16px 36px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+.admin-shell .admin-top h1 { font-size: 19px; font-weight: 650; letter-spacing: -0.015em; margin: 0; }
+.admin-shell .admin-top p { font-size: 12.5px; margin: 2px 0 0; }
+
+/* ---------- Surfaces ---------- */
+.admin-shell .panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+.admin-shell .panel-head { padding: 12px 16px; border-bottom: 1px solid var(--line); min-height: 48px; }
+.admin-shell .panel-title { font-size: 13.5px; font-weight: 650; letter-spacing: -0.005em; margin: 0; }
+.admin-shell .panel-body { padding: 16px; }
+.admin-shell .admin-grid { gap: 16px; }
+.admin-shell .notice {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.admin-shell .notice-error { background: #fdf2f2; border-color: #f5d0d0; color: #9b1c1c; }
+.admin-shell .notice-warn { background: #fffaeb; border-color: #f5e3b3; color: #7a5300; }
+
+/* ---------- KPIs: numbers first, no boxes in boxes ---------- */
+.admin-shell .kpi-row { gap: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.admin-shell .kpi-row .kpi { border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 14px 16px; border-right: 1px solid var(--line); }
+.admin-shell .kpi-row .kpi:last-child { border-right: 0; }
+.admin-shell .kpi small { color: var(--muted); font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.admin-shell .kpi strong { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* ---------- Tables ---------- */
+.admin-shell table { font-size: 13.5px; border-collapse: separate; border-spacing: 0; width: 100%; }
+.admin-shell th {
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 550;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.admin-shell td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.admin-shell tbody tr:last-child td { border-bottom: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .admin-shell tbody tr:hover td { background: color-mix(in srgb, var(--soft) 60%, transparent); }
+}
+.admin-shell .table-wrap { border-radius: 0 0 var(--radius) var(--radius); }
+
+/* ---------- Controls ---------- */
+.admin-shell .btn,
+body:has(.admin-shell) .dialog-content .btn {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 550;
+  gap: 6px;
+  box-shadow: none;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms var(--ease-out);
+}
+.admin-shell .btn:active,
+body:has(.admin-shell) .dialog-content .btn:active { transform: scale(0.98); }
+.admin-shell .btn-sm { height: 28px; min-height: 28px; padding: 0 10px; font-size: 12.5px; }
+.admin-shell .btn-icon { width: 30px; padding: 0; justify-content: center; }
+.admin-shell .btn-primary,
+body:has(.admin-shell) .dialog-content .btn-primary { background: var(--ink); color: var(--surface); border: 1px solid var(--ink); }
+.admin-shell .btn-primary:hover,
+body:has(.admin-shell) .dialog-content .btn-primary:hover { background: color-mix(in srgb, var(--ink) 86%, var(--surface)); }
+.admin-shell .btn-outline,
+body:has(.admin-shell) .dialog-content .btn-outline { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); }
+.admin-shell .btn-outline:hover,
+body:has(.admin-shell) .dialog-content .btn-outline:hover { background: var(--soft); }
+.admin-shell .btn-ghost { color: var(--ink-2); background: transparent; border: 1px solid transparent; }
+.admin-shell .btn-ghost:hover { background: var(--soft); color: var(--ink); }
+.admin-shell .btn-danger,
+body:has(.admin-shell) .dialog-content .btn-danger { background: var(--surface); color: #b42318; border: 1px solid #f1c4bf; }
+.admin-shell .btn-danger:hover,
+body:has(.admin-shell) .dialog-content .btn-danger:hover { background: #fef3f2; }
+.dark .admin-shell .btn-danger { background: transparent; color: #ff8f84; border-color: #5a2722; }
+
+.admin-shell input:not([type='checkbox']):not([type='radio']):not([type='color']),
+.admin-shell select,
+.admin-shell textarea,
+body:has(.admin-shell) .dialog-content input:not([type='checkbox']):not([type='radio']):not([type='color']),
+body:has(.admin-shell) .dialog-content select,
+body:has(.admin-shell) .dialog-content textarea {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  font-size: 13.5px;
+  color: var(--ink);
+  box-shadow: none;
+}
+.admin-shell input:not([type='checkbox']):not([type='radio']):not([type='color']),
+.admin-shell select,
+body:has(.admin-shell) .dialog-content input:not([type='checkbox']):not([type='radio']):not([type='color']),
+body:has(.admin-shell) .dialog-content select { height: 34px; padding: 0 10px; }
+.admin-shell textarea,
+body:has(.admin-shell) .dialog-content textarea { padding: 8px 10px; line-height: 1.5; }
+.admin-shell :is(input, select, textarea):focus-visible,
+body:has(.admin-shell) .dialog-content :is(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+.admin-shell .field label,
+body:has(.admin-shell) .dialog-content .field label { font-size: 12.5px; font-weight: 550; color: var(--ink-2); }
+.admin-shell .search-field { border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); }
+.admin-shell .search-field input { border: 0 !important; box-shadow: none !important; }
+
+/* ---------- Badges: quiet, colour only where it means something ---------- */
+.admin-shell .badge,
+body:has(.admin-shell) .dialog-content .badge {
+  background: var(--soft);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 550;
+  padding: 1px 7px;
+  letter-spacing: 0;
+}
+.admin-shell .badge-green { background: #ecfdf3; color: #067647; border-color: #c6f0d8; }
+.admin-shell .badge-red { background: #fef3f2; color: #b42318; border-color: #f7cfca; }
+.admin-shell .badge-amber,
+.admin-shell .badge-yellow { background: #fffaeb; color: #93370d; border-color: #f8e2b0; }
+.admin-shell .badge-purple { background: var(--purple-soft); color: var(--purple); border-color: transparent; }
+.dark .admin-shell .badge-green { background: #0c2a1d; color: #6ce0a8; border-color: #154630; }
+.dark .admin-shell .badge-red { background: #2c1311; color: #ff9b91; border-color: #4a1f1b; }
+.dark .admin-shell :is(.badge-amber, .badge-yellow) { background: #2b2008; color: #f5c96b; border-color: #4a3610; }
+
+/* ---------- Feeds, chips, search hits ---------- */
+.admin-shell .feed-row { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.admin-shell .feed-row:last-child { border-bottom: 0; }
+.admin-shell .feed-dot { width: 6px; height: 6px; background: var(--line-strong); }
+.admin-shell .chip { height: 28px; border-radius: 7px; font-size: 12.5px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); }
+.admin-shell .chip.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.admin-shell .search-hit { border-radius: 7px; font-size: 13px; }
+.admin-shell .tabs { border-bottom: 1px solid var(--line); gap: 2px; }
+.admin-shell .tab { font-size: 13px; border-radius: 0; padding: 8px 10px; border-bottom: 2px solid transparent; color: var(--muted); background: none; }
+.admin-shell .tab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.admin-shell .skeleton { background: linear-gradient(90deg, var(--soft), var(--surface), var(--soft)); border-radius: var(--radius); }
+
+/* ---------- Drawer & dialogs ---------- */
+.admin-shell .drawer-scrim { background: #18181b33; backdrop-filter: none; }
+.admin-shell .drawer {
+  width: min(600px, 100vw);
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  animation: admin-drawer-in 260ms var(--ease-drawer);
+}
+@keyframes admin-drawer-in {
+  from { transform: translateX(24px); opacity: 0; }
+}
+.admin-shell .drawer-head { padding: 16px 20px; }
+.admin-shell .drawer-head h2 { font-size: 16px; font-weight: 650; }
+.admin-shell .drawer-body { padding: 18px 20px 40px; gap: 16px; }
+body:has(.admin-shell) .dialog-content {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+body:has(.admin-shell) .dialog-overlay { background: #18181b40; }
+
+/* ---------- Admin-only widgets ---------- */
+.admin-shell .meter { display: grid; gap: 6px; font-size: 13px; }
+.admin-shell .meter-bar { height: 6px; border-radius: 99px; background: var(--soft); overflow: hidden; }
+.admin-shell .meter-bar span { display: block; height: 100%; background: var(--ink-2); border-radius: 99px; }
+.admin-shell .meter-bar.warn span { background: #dc8b0b; }
+.admin-shell .meter-bar.danger span { background: #d92d20; }
+.admin-shell .admin-row { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.admin-shell .admin-row:last-of-type { border-bottom: 0; }
+.admin-shell .care-box,
+.admin-shell .lead-box { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.admin-shell .warn-row { display: flex; gap: 10px; align-items: baseline; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.admin-shell .wish-admin { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.admin-shell .wish-admin:last-child { border-bottom: 0; }
+.admin-shell .wish-votes { min-width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.admin-shell .snippet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 16px; }
+.admin-shell .snippet { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); align-content: start; }
+.admin-shell .snippet p { font-size: 12.5px; color: var(--muted); white-space: pre-line; margin: 0; }
+.admin-shell .secret-box { background: var(--soft); color: var(--ink); border: 1px solid var(--line); font-size: 12.5px; }
+.admin-shell .mini-bars span { background: var(--ink-2); opacity: 0.85; border-radius: 2px 2px 0 0; }
+.admin-shell .rank-bar span { background: var(--ink-2); }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 900px) {
+  .admin-shell { grid-template-columns: 1fr; }
+  .admin-shell .admin-side { border-right: 0; border-bottom: 1px solid var(--line); padding: 10px; }
+  .admin-shell .admin-nav.on { box-shadow: inset 0 -2px 0 var(--purple); }
+  .admin-shell .admin-main { padding: 0 16px 48px; }
+  .admin-shell .admin-top { margin: 0 -16px 18px; padding: 12px 16px; position: static; }
+  .admin-shell .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-shell .kpi-row .kpi { border-bottom: 1px solid var(--line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell .drawer { animation: none; }
+  .admin-shell .btn:active { transform: none; }
+}
+
+/* Refinements after visual review */
+.admin-shell .kpi-row { margin-bottom: 0; }
+.admin-shell .search {
+  display: flex; align-items: center; gap: 8px; max-width: 420px;
+  height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--muted);
+}
+.admin-shell .search:focus-within { border-color: var(--purple); box-shadow: 0 0 0 3px var(--focus); }
+.admin-shell .search input { border: 0 !important; box-shadow: none !important; height: 32px !important; padding: 0 !important; background: transparent !important; flex: 1; min-width: 0; }
+.admin-shell .avatar { width: 32px; height: 32px; border-radius: 8px; background: var(--soft); color: var(--ink-2); font-size: 11.5px; font-weight: 650; border: 1px solid var(--line); }
+.admin-shell .wish-admin select { width: auto; min-width: 140px; }
+.admin-shell .wish-admin input { flex: 1; min-width: 200px; width: auto; }
+.admin-shell .wish-admin .row { flex-wrap: nowrap; align-items: center; }
+@media (max-width: 700px) { .admin-shell .wish-admin .row { flex-wrap: wrap; } }
+.admin-shell .snippet { grid-template-rows: auto 1fr auto; }
+.admin-shell .panel-head input { height: 30px !important; }
+.admin-shell .meter + .meter { margin-top: 2px; }
+.admin-shell input:not([type='checkbox']):not([type='radio']):not([type='color']),
+.admin-shell select,
+body:has(.admin-shell) .dialog-content input:not([type='checkbox']):not([type='radio']):not([type='color']),
+body:has(.admin-shell) .dialog-content select { min-height: 34px; }
+.admin-shell textarea,
+body:has(.admin-shell) .dialog-content textarea { min-height: 72px; }

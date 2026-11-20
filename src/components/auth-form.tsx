@@ -29,6 +29,7 @@ export function AuthForm({
     try {
       await api('/api/auth', 'POST', {
         action: mode,
+        portal: admin ? 'admin' : 'business',
         email: f.get('email') || undefined,
         password: f.get('password') || undefined,
         name: f.get('name') || undefined,

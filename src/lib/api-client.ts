@@ -53,6 +53,23 @@ export function friendlyError(error: unknown, locale: string) {
       'Please enter an https link from PayPal, Ko-fi, Buy Me a Coffee or Stripe.',
       'Bitte einen https-Link von PayPal (paypal.me), Ko-fi, Buy Me a Coffee oder Stripe eingeben.',
     ],
+    WRONG_PORTAL_ADMIN: [
+      'This is an administrator account. Please sign in at /admin/login.',
+      'Das ist ein Admin-Konto. Bitte melde dich über /admin/login an – das Geschäftskonto hat einen eigenen Login.',
+    ],
+    WRONG_PORTAL_BUSINESS: [
+      'This is not an administrator account. Please use the normal login.',
+      'Das ist kein Admin-Konto. Bitte nutze den normalen Login unter /login.',
+    ],
+    ADMIN_MUST_BE_SEPARATE: [
+      'Admin accounts cannot own or join businesses. Use a separate business account.',
+      'Admin-Konten dürfen keinen Betrieb besitzen oder einem Team angehören. Bitte ein eigenes Geschäftskonto nutzen.',
+    ],
+    ADMIN_USE_SUPPORT_MODE: [
+      'Admins can only change a business in support mode.',
+      'Admins können einen Betrieb nur im Supportmodus bearbeiten.',
+    ],
+    LAST_ADMIN: ['At least one admin account must remain.', 'Es muss mindestens ein Admin-Konto bestehen bleiben.'],
     TERMS_REQUIRED: [
       'Please sign the current terms first (reload the page).',
       'Bitte unterschreibe zuerst die aktuellen Nutzungsbedingungen (Seite neu laden).',

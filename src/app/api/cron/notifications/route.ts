@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { emailConfigured } from '@/lib/email';
 import { json } from '@/lib/http';
 import { processQueue, registerAppUrl } from '@/lib/notifications';
+import { purgeDue } from '@/lib/trash';
 export const maxDuration = 60;
 function same(a: string, b: string) {
   return Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -22,6 +23,8 @@ async function handle(request: Request) {
   }
   if (!allowed) return json({ error: 'FORBIDDEN' }, 403);
   await registerAppUrl(request);
+  // Accounts whose 14-day trash period is over are deleted for good (incl. files).
+  await purgeDue().catch(() => 0);
   if (!emailConfigured())
     return json({ status: 'unavailable', reason: 'Set RESEND_API_KEY and EMAIL_FROM (verified domain) in Vercel.' }, 503);
   try {
