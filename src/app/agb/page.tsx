@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { LegalPage, Ph } from '@/components/legal';
+import { dateDe, publicSettings } from '@/lib/release';
 export const metadata: Metadata = { title: 'AGB – Slotdove', description: 'Allgemeine Geschäftsbedingungen für die Nutzung der Terminbuchungssoftware Slotdove durch Unternehmer.' };
 
 const toc: [string, string][] = [
   ['geltung', 'Geltungsbereich, Unternehmereigenschaft'],
   ['leistung', 'Leistungsbeschreibung'],
   ['vertrag', 'Registrierung und Vertragsschluss'],
-  ['test', 'Testphase und Demo-Zugänge'],
+  ['test', 'Kostenlose Startphase, Demo-Zugänge'],
   ['preise', 'Tarife, Preise und Zahlung'],
   ['pflichten', 'Pflichten des Kunden'],
   ['endkunden', 'Verhältnis zu Endkunden des Kunden'],
@@ -15,6 +16,7 @@ const toc: [string, string][] = [
   ['verboten', 'Verbotene Nutzung'],
   ['moderation', 'Meldeverfahren, Moderation und Sperrung (DSA)'],
   ['ki', 'KI-Funktionen'],
+  ['unterstuetzung', 'Freiwillige Unterstützung'],
   ['verfuegbarkeit', 'Verfügbarkeit, Wartung, Änderungen'],
   ['datenschutz', 'Datenschutz und Auftragsverarbeitung'],
   ['sicherheit', 'Zugangsdaten und Sicherheit'],
@@ -26,7 +28,10 @@ const toc: [string, string][] = [
   ['schluss', 'Schlussbestimmungen'],
 ];
 
-export default function Page() {
+export default async function Page() {
+  const { release } = await publicSettings();
+  const from = dateDe(release.free_from),
+    until = dateDe(release.free_until);
   return (
     <LegalPage title="Allgemeine Geschäftsbedingungen (AGB)" toc={toc}>
       <p>
@@ -67,7 +72,11 @@ export default function Page() {
 
       <h2 id="vertrag">§ 3 Registrierung und Vertragsschluss</h2>
       <ol>
-        <li>Die Darstellung der Tarife auf der Website stellt kein bindendes Angebot dar.</li>
+        <li>Die Darstellung der Tarife auf der Website stellt kein bindendes Angebot dar. Als „voraussichtlich“ bezeichnete Preise sind unverbindlich.</li>
+        <li>
+          Während der Startphase ist eine Registrierung nur nach Voranmeldung und Freigabe durch uns möglich. Die Freigabe erfolgt durch einen persönlichen, befristeten Registrierungslink. Wir können
+          Voranmeldungen ohne Angabe von Gründen ablehnen; die Gleichbehandlungsgrundsätze des AGG bleiben unberührt.
+        </li>
         <li>
           Mit Abschluss der Registrierung und Bestätigung dieser AGB, der Datenschutzerklärung und des Auftragsverarbeitungsvertrags gibt der Kunde ein Angebot auf Abschluss eines Nutzungsvertrags ab. Der
           Vertrag kommt mit Freischaltung des Kontos zustande.
@@ -76,20 +85,33 @@ export default function Page() {
         <li>Die für den Kunden handelnde Person versichert, zur Vertretung berechtigt und volljährig zu sein.</li>
       </ol>
 
-      <h2 id="test">§ 4 Testphase und Demo-Zugänge</h2>
+      <h2 id="test">§ 4 Kostenlose Startphase, Demo-Zugänge</h2>
       <ol>
-        <li>Wir können eine kostenlose Testphase (in der Regel 14 Tage) anbieten. Während der Testphase entstehen keine Kosten.</li>
         <li>
-          Die Testphase endet automatisch. Sie geht nur dann in einen kostenpflichtigen Tarif über, wenn der Kunde ausdrücklich einen kostenpflichtigen Tarif bucht. Ohne Buchung wird der Zugang nach Ablauf
-          eingeschränkt; Daten werden nach weiteren 30 Tagen gelöscht, sofern der Kunde keinen Tarif wählt.
+          Vom <strong>{from}</strong> bis zum <strong>{until}</strong> (Startphase) stellen wir den Dienst mit allen Funktionen <strong>unentgeltlich</strong> bereit. Es wird kein Abonnement abgeschlossen,
+          es werden keine Zahlungsdaten erhoben, und nichts verlängert sich automatisch kostenpflichtig.
         </li>
-        <li>Demo-Zugänge enthalten Beispieldaten; E-Mails an Dritte werden aus Demo-Konten nicht versendet.</li>
+        <li>
+          Ein kostenpflichtiger Vertrag entsteht nach der Startphase nur, wenn der Kunde ausdrücklich einen kostenpflichtigen Tarif bucht. Wir informieren den Kunden mindestens vier Wochen vor Ende der
+          Startphase in Textform über die dann geltenden Tarife. Bucht der Kunde keinen Tarif, kann er seine Daten exportieren; danach wird der Zugang eingeschränkt und das Konto frühestens 30 Tage nach
+          Ende der Startphase gelöscht, worauf wir vorher hinweisen.
+        </li>
+        <li>
+          Wir können die unentgeltliche Bereitstellung aus wichtigem Grund oder mit einer Frist von vier Wochen beenden oder verlängern. Eine Verlängerung oder Änderung des Zeitraums teilen wir auf der
+          Website und im Dashboard mit.
+        </li>
+        <li>
+          Für die unentgeltliche Bereitstellung haften wir abweichend von § 15 Abs. 2 nur für Vorsatz und grobe Fahrlässigkeit sowie bei Verletzung von Leben, Körper oder Gesundheit und nach dem
+          Produkthaftungsgesetz (vgl. §§ 521, 599 BGB). Unsere datenschutzrechtliche Haftung (Art. 82 DSGVO) bleibt unberührt.
+        </li>
+        <li>Demo-Zugänge enthalten Beispieldaten; E-Mails an Dritte werden aus Demo-Konten nicht versendet. Demo-Betriebe werden 30 Tage nach Ende der Demo automatisch gelöscht.</li>
       </ol>
 
       <h2 id="preise">§ 5 Tarife, Preise und Zahlung</h2>
       <ol>
         <li>
-          Es gelten die zum Zeitpunkt der Buchung auf der Website angegebenen Preise (derzeit ab 5 €, 15 € bzw. 25 € pro Monat je nach Tarif). Alle Preise verstehen sich{' '}
+          Während der Startphase (§ 4) fallen keine Entgelte an. Nach der Startphase gelten – nur bei ausdrücklicher Buchung – die zum Zeitpunkt der Buchung auf der Website angegebenen Preise (voraussichtlich
+          ab 5 €, 15 € bzw. 25 € pro Monat je nach Tarif). Alle Preise verstehen sich{' '}
           <Ph>zzgl. der gesetzlichen Umsatzsteuer – ODER bei Kleinunternehmerregelung: „ohne Ausweis der Umsatzsteuer gemäß § 19 UStG“</Ph>.
         </li>
         <li>Die Vergütung ist monatlich bzw. jährlich im Voraus fällig. Rechnungen werden elektronisch gestellt; der Kunde stimmt der elektronischen Rechnungsstellung zu.</li>
@@ -194,6 +216,17 @@ export default function Page() {
         </li>
       </ol>
 
+      <h2 id="unterstuetzung">§ 11a Freiwillige Unterstützung</h2>
+      <ol>
+        <li>
+          Nutzer und Dritte können Slotdove freiwillig mit einem Geldbetrag unterstützen (z. B. über PayPal). Die Unterstützung erfolgt <strong>ohne Gegenleistung</strong>; sie begründet keinen
+          Anspruch auf Leistungen, Funktionen, Verfügbarkeit oder bevorzugte Behandlung und hat keinen Einfluss auf die Nutzung.
+        </li>
+        <li>Es handelt sich nicht um eine Spende im steuerlichen Sinn. Eine Zuwendungsbestätigung (Spendenquittung) wird nicht ausgestellt.</li>
+        <li>Die Mittel werden ausschließlich für die laufenden Betriebskosten von Slotdove verwendet.</li>
+        <li>Versehentlich oder doppelt gezahlte Beträge erstatten wir auf Anfrage innerhalb von 14 Tagen nach Zahlung.</li>
+      </ol>
+
       <h2 id="verfuegbarkeit">§ 12 Verfügbarkeit, Wartung, Änderungen</h2>
       <ol>
         <li>
@@ -254,6 +287,7 @@ export default function Page() {
 
       <h2 id="laufzeit">§ 17 Laufzeit und Kündigung</h2>
       <ol>
+        <li>Während der Startphase kann der Kunde den Vertrag jederzeit ohne Frist beenden, insbesondere durch Löschung seines Kontos im Dashboard.</li>
         <li>
           Monatliche Tarife laufen auf unbestimmte Zeit und können von beiden Seiten mit einer Frist von 14 Tagen zum Ende des jeweiligen Abrechnungsmonats gekündigt werden. Jahrestarife verlängern sich
           nach Ablauf auf unbestimmte Zeit und sind dann mit einer Frist von einem Monat kündbar.

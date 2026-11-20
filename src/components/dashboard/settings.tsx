@@ -1,11 +1,14 @@
 'use client';
+import { supabaseBrowser } from '@/lib/supabase/client';
+import { dateDe, RELEASE_DEFAULT, safeSupportUrl, SUPPORT_DEFAULT, type Release, type Support } from '@/lib/release';
+import { SupportCard } from '../support-card';
 import { AccountPrivacy } from './trust-dialogs';
 import { InfoTip } from '../tutorial';
 import type { Visual } from '@/lib/tutorials';
 import { industries, industryById } from '@/lib/industries';
 import { computeInsights } from '@/lib/ai/insights';
 import { Rich } from './assistant';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
 import { LogoUpload } from '../logo-upload';
 import { ProfileForm } from '../profile-form';
@@ -561,6 +564,29 @@ export function Billing() {
   const w = useWorkspace(),
     { locale } = useI18n();
   const de = locale === 'de';
+  const [cfg, setCfg] = useState<{ release: Release; support: Support }>({ release: RELEASE_DEFAULT, support: SUPPORT_DEFAULT });
+  useEffect(() => {
+    supabaseBrowser()
+      .from('platform_settings')
+      .select('key,value')
+      .in('key', ['release', 'support'])
+      .then(({ data }) => {
+        const next = { release: RELEASE_DEFAULT, support: SUPPORT_DEFAULT };
+        for (const row of data || []) {
+          if (row.key === 'release') next.release = { ...RELEASE_DEFAULT, ...(row.value as Partial<Release>) };
+          if (row.key === 'support') {
+            const sp = { ...SUPPORT_DEFAULT, ...(row.value as Partial<Support>) };
+            sp.url = safeSupportUrl(sp.url);
+            sp.enabled = sp.enabled && !!sp.url;
+            next.support = sp;
+          }
+        }
+        setCfg(next);
+      });
+  }, []);
+  const from = dateDe(cfg.release.free_from),
+    until = dateDe(cfg.release.free_until),
+    after = String(Number(cfg.release.free_until.slice(0, 4)) + 1);
   const plans = [
     { id: 'free', name: 'Starter', price: 5, items: de ? ['1 Kalender', 'Online-Buchungsseite', 'E-Mail-Erinnerungen', 'Chat'] : ['1 calendar', 'Online booking page', 'Email reminders', 'Chat'] },
     { id: 'pro', name: 'Pro', price: 15, items: de ? ['Bis 5 Teammitglieder', 'Slotdove KI', 'Auswertungen', 'Alles aus Starter'] : ['Up to 5 team members', 'Slotdove AI', 'Analytics', 'Everything in Starter'] },
@@ -568,11 +594,20 @@ export function Billing() {
   ];
   return (
     <>
-      <Heading title={de ? 'Dein Tarif' : 'Your plan'} description={de ? 'Einfache Preise, monatlich kündbar.' : 'Simple pricing, cancel monthly.'} />
+      <Heading title={de ? 'Dein Tarif' : 'Your plan'} description={de ? `Kostenlos vom ${from} bis ${until}.` : `Free from ${from} to ${until}.`} />
+      <div className="free-banner" style={{ maxWidth: 'none' }}>
+        <strong>0 €</strong>
+        <span>
+          {de ? `Alle Funktionen kostenlos · ${from} – ${until}` : `All features free · ${from} – ${until}`}
+          <small>{de ? 'Kein Abo, keine Zahlungsdaten, nichts zu kündigen. Vor dem Ende informieren wir dich rechtzeitig – ohne deine Zustimmung entstehen keine Kosten.' : 'No subscription, no payment details, nothing to cancel. We will inform you before the end – nothing is charged without your consent.'}</small>
+        </span>
+      </div>
+      <SupportCard support={cfg.support} de={de} compact />
+      <h3 style={{ margin: '26px 0 12px' }}>{de ? `Voraussichtliche Tarife ab ${after}` : `Expected plans from ${after}`}</h3>
       <div className="plan-grid">
         {plans.map((p) => (
-          <div key={p.id} className={`plan-card ${w.plan === p.id ? 'current' : ''} ${p.id === 'pro' ? 'featured' : ''}`}>
-            {w.plan === p.id && <span className="badge badge-green">{de ? 'Aktueller Tarif' : 'Current plan'}</span>}
+          <div key={p.id} className={`plan-card ${p.id === 'pro' ? 'featured' : ''}`}>
+            <span className="badge">{de ? `voraussichtlich ab ${after}` : `expected from ${after}`}</span>
             <h3>{p.name}</h3>
             <div className="plan-price">
               <strong>{p.price} €</strong>
@@ -585,16 +620,11 @@ export function Billing() {
                 </li>
               ))}
             </ul>
-            {w.plan !== p.id && (
-              <Link className="btn btn-outline" href="/dashboard/chat">
-                {de ? 'Wechsel anfragen' : 'Request switch'}
-              </Link>
-            )}
           </div>
         ))}
       </div>
       <p className="muted" style={{ marginTop: 18 }}>
-        {de ? 'Preise inkl. MwSt. Die Zahlungsabwicklung wird gerade eingerichtet – bis dahin vergibt das Slotdove-Team deinen Tarif.' : 'Prices incl. VAT. Payment processing is being set up – until then the Slotdove team assigns your plan.'}
+        {de ? `Aktuell zugeordnet: ${w.plan === 'free' ? 'Starter' : w.plan === 'pro' ? 'Pro' : 'Business'} – in der Gratis-Phase sind trotzdem alle Funktionen frei.` : 'All features are free during the launch phase.'}
       </p>
     </>
   );

@@ -4327,3 +4327,25 @@ code.num {
 .search-hit { display: block; width: 100%; text-align: left; padding: 9px 12px; border-radius: 10px; font-size: 13px; background: none; border: 0; color: inherit; cursor: pointer; overflow-wrap: anywhere; }
 .search-hit:hover { background: var(--surface-2, #eef5f5); }
 .badge-yellow { background: #fff3c4; color: #6b4e00; }
+
+/* Admin sidebar: scroll inside the dark column instead of overflowing below it */
+@media (min-width: 901px) {
+  .admin-side { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ffffff30 transparent; gap: 12px; }
+  .admin-side nav { flex: none; }
+  .admin-nav { min-height: 36px; padding: 7px 12px; font-size: 14px; }
+  .admin-side-bottom { padding-top: 10px; border-top: 1px solid #ffffff14; }
+  .admin-nav-group { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #ffffff5c; padding: 10px 12px 4px; }
+}
+@media (max-width: 900px) { .admin-nav-group { display: none; } }
+
+/* Free release + voluntary support */
+.free-banner { display: flex; align-items: center; gap: 18px; margin: 0 auto 26px; max-width: 760px; padding: 18px 24px; border-radius: 20px; background: linear-gradient(120deg, var(--deep), var(--purple)); color: #fff; }
+.free-banner strong { font-size: 44px; letter-spacing: -0.04em; line-height: 1; }
+.free-banner span { display: grid; gap: 2px; font-weight: 650; }
+.free-banner small { opacity: .8; font-weight: 500; }
+.support-card { display: flex; align-items: center; gap: 18px; padding: 22px; border-radius: 20px; border: 1px solid #d5e4e4; background: var(--surface, #fff); }
+.support-card p { margin: 4px 0 6px; }
+.support-card .support-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: #ffe4ea; color: #d6336c; flex: none; }
+.support-card.compact { padding: 14px 16px; gap: 12px; }
+@media (max-width: 640px) { .support-card { flex-direction: column; align-items: flex-start; } .free-banner { flex-direction: column; align-items: flex-start; } }
+.dark .support-card { border-color: #24464a; }

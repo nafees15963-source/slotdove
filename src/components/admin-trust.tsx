@@ -863,3 +863,69 @@ export function CreateUserButton({ onDone }: { onDone: () => void }) {
     </>
   );
 }
+
+/** Free release window, pre-registration gate and voluntary support link. */
+export function ReleaseDesk() {
+  const [data, load] = useView<{ settings: Record<string, Record<string, unknown>> }>('view=settings');
+  if (!data) return <div className="skeleton" style={{ height: 160 }} />;
+  const r = (data.settings.release || {}) as { free_from?: string; free_until?: string; invite_only?: boolean };
+  const sp = (data.settings.support || {}) as { enabled?: boolean; url?: string; text?: string };
+  return (
+    <div className="admin-grid" style={{ marginBottom: 18 }}>
+      <section className="panel">
+        <div className="panel-head">
+          <h2 className="panel-title">Gratis-Release</h2>
+        </div>
+        <form
+          className="panel-body form-grid"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = Object.fromEntries(new FormData(e.currentTarget));
+            if (await post({ action: 'release', free_from: f.free_from, free_until: f.free_until, invite_only: f.invite_only === 'on' }, 'Release gespeichert')) load();
+          }}
+        >
+          <div className="field">
+            <label htmlFor="rl-from">Kostenlos ab</label>
+            <input id="rl-from" name="free_from" type="date" required defaultValue={r.free_from || '2027-01-01'} />
+          </div>
+          <div className="field">
+            <label htmlFor="rl-until">Kostenlos bis</label>
+            <input id="rl-until" name="free_until" type="date" required defaultValue={r.free_until || '2027-12-31'} />
+          </div>
+          <label className="check-label full">
+            <input type="checkbox" name="invite_only" defaultChecked={r.invite_only !== false} /> Registrierung nur nach meiner Bestätigung (Voranmeldung → „Bestätigen & Link senden“)
+          </label>
+          <Button type="submit">Speichern</Button>
+          <small className="muted full">Die Daten erscheinen auf Startseite, Tarifseite, im Dashboard und in den AGB-Hinweisen. Änderungen sind nach ca. 1 Minute sichtbar.</small>
+        </form>
+      </section>
+      <section className="panel">
+        <div className="panel-head">
+          <h2 className="panel-title">Freiwillig unterstützen (PayPal-Link)</h2>
+        </div>
+        <form
+          className="panel-body form-grid"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = Object.fromEntries(new FormData(e.currentTarget));
+            if (await post({ action: 'support', enabled: f.enabled === 'on', url: String(f.url || ''), text: String(f.text || '') }, 'Gespeichert')) load();
+          }}
+        >
+          <div className="field full">
+            <label htmlFor="sp-url">Link (z. B. https://paypal.me/deinname)</label>
+            <input id="sp-url" name="url" type="url" maxLength={300} defaultValue={sp.url || ''} placeholder="https://paypal.me/…" />
+          </div>
+          <div className="field full">
+            <label htmlFor="sp-text">Eigener Text (optional)</label>
+            <input id="sp-text" name="text" maxLength={300} defaultValue={sp.text || ''} placeholder="Hilf mit, die Serverkosten zu decken." />
+          </div>
+          <label className="check-label full">
+            <input type="checkbox" name="enabled" defaultChecked={!!sp.enabled} /> Button „Unterstützen“ auf der Webseite anzeigen
+          </label>
+          <Button type="submit">Speichern</Button>
+          <small className="muted full">Erlaubt sind nur https-Links von paypal.me, PayPal, Ko-fi, Buy Me a Coffee und Stripe. Auf der Seite steht automatisch: freiwillig, ohne Gegenleistung, keine Spendenquittung.</small>
+        </form>
+      </section>
+    </div>
+  );
+}

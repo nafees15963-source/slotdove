@@ -106,11 +106,18 @@ export function PrivateLink({ invite = false }: { invite?: boolean }) {
                 ? 'Melde dich mit der eingeladenen, bestätigten E-Mail-Adresse an und nimm anschließend die Einladung an.'
                 : 'Sign in with the invited, verified email address, then accept your invitation.'}
             </p>
-            <Button variant="outline" asChild>
-              <Link href="/login" target="_blank">
-                {t.login}
-              </Link>
-            </Button>
+            <div className="row wrap">
+              <Button variant="outline" asChild>
+                <Link href="/login" target="_blank">
+                  {t.login}
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/signup" target="_blank">
+                  {locale === 'de' ? 'Noch kein Konto? Registrieren' : 'No account yet? Sign up'}
+                </Link>
+              </Button>
+            </div>
             <Button disabled={busy || !token || accepted} onClick={() => action('accept')}>
               {busy ? t.loading : locale === 'de' ? 'Einladung annehmen' : 'Accept invitation'}
               <ArrowRight size={14} />

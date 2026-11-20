@@ -36,7 +36,7 @@ try {
   await server.start();
   const db = await connect();
   await db.query(
-    `create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz default now());create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated,anon,service_role;grant execute on function auth.uid() to authenticated,anon,service_role;`,
+    `create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz default now(),created_at timestamptz default now());create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated,anon,service_role;grant execute on function auth.uid() to authenticated,anon,service_role;`,
   );
   await db.query(
     'create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;grant usage on schema storage to authenticated;grant select,insert,update,delete on storage.objects to authenticated;',
@@ -132,6 +132,18 @@ try {
     await other.query('set role authenticated');
     await other.query("select set_config('request.jwt.claim.sub',$1,false)", [u2]);
     await assert.rejects(other.query('select replace_week_plan($1,$2,$3)', [b1, st, '[]']), /FORBIDDEN/);
+  });
+  await test('retention job removes stale personal data and keeps active data', async () => {
+    const ghost = randomUUID();
+    await db.query("insert into auth.users(id,email,created_at,email_confirmed_at) values($1,'ghost@example.test',now()-interval '40 days',null)", [ghost]);
+    await db.query("insert into waitlist(company,contact_name,email,consent,consent_text,status,updated_at) values('Old Co','Old','old@example.test',true,'x','new',now()-interval '13 months')");
+    await db.query("insert into waitlist(company,contact_name,email,consent,consent_text,status) values('New Co','New','new@example.test',true,'x','new')");
+    await db.query('select private.apply_retention()');
+    assert.equal((await db.query('select 1 from auth.users where id=$1', [ghost])).rowCount, 0);
+    assert.equal((await db.query("select 1 from waitlist where email='old@example.test'")).rowCount, 0);
+    assert.equal((await db.query("select 1 from waitlist where email='new@example.test'")).rowCount, 1);
+    assert.equal((await db.query('select 1 from businesses where id=$1', [b1])).rowCount, 1);
+    await db.query("delete from waitlist where email='new@example.test'");
   });
   await test('chat, activity and reports are not readable by tenants directly', async () => {
     for (const t of ['messages', 'conversations', 'message_reports', 'activity_log', 'admin_business_notes'])

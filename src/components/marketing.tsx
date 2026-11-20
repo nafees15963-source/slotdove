@@ -60,7 +60,7 @@ export async function MarketingFooter() {
               <strong>{m.productLinks}</strong>
               <Link href="/#features">{t.features}</Link>
               <Link href="/#pricing">{t.pricing}</Link>
-              <Link href="/signup">{t.start}</Link>
+              <Link href="/#warteliste">{t.start}</Link>
             </div>
             <div>
               <strong>{m.companyLinks}</strong>
@@ -77,6 +77,7 @@ export async function MarketingFooter() {
               <Link href="/agb">{t.terms}</Link>
               <Link href="/impressum">{t.legal}</Link>
               <Link href="/avv">AVV</Link>
+              <Link href="/unterstuetzen">{t.legal === 'Impressum' ? 'Unterstützen' : 'Support us'}</Link>
               <Link href="/melden">{t.legal === 'Impressum' ? 'Inhalte melden' : 'Report content'}</Link>
             </div>
           </div>

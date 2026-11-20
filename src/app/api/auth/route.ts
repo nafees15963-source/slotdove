@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supabaseServer } from '@/lib/supabase/server';
-import { body, failure, HttpError, json, sameOrigin, softRateLimit } from '@/lib/http';
+import { body, failure, hashToken, HttpError, json, sameOrigin, softRateLimit } from '@/lib/http';
 import { logActivity } from '@/lib/activity';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { ipHash, isBlocked, LEGAL_VERSION, platformSetting } from '@/lib/trust';
@@ -10,6 +10,7 @@ const schema = z.object({
   password: z.string().min(12).max(128).optional(),
   name: z.string().min(2).max(100).optional(),
   legal: z.boolean().optional(),
+  invite: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),
 });
 export async function POST(request: Request) {
   try {
@@ -49,6 +50,31 @@ export async function POST(request: Request) {
       if (input.legal !== true) throw new HttpError(400, 'LEGAL_REQUIRED');
       if (!(await platformSetting('signups')).enabled) throw new HttpError(503, 'SIGNUPS_PAUSED');
       if (await isBlocked({ email: input.email, request })) throw new HttpError(403, 'BLOCKED');
+      // Pre-registration phase: only people approved by the Slotdove team may create an account.
+      let leadId: string | null = null;
+      if ((await platformSetting('release')).invite_only) {
+        // People invited into a team by a business may always create their account.
+        const { data: teamInvite } = await supabaseAdmin()
+          .from('business_invitations')
+          .select('id')
+          .eq('email', input.email.toLowerCase())
+          .is('accepted_at', null)
+          .is('revoked_at', null)
+          .gt('expires_at', new Date().toISOString())
+          .limit(1)
+          .maybeSingle();
+        if (!teamInvite && !input.invite) throw new HttpError(403, 'INVITE_REQUIRED');
+      }
+      if (input.invite && (await platformSetting('release')).invite_only) {
+        const { data: lead } = await supabaseAdmin()
+          .from('waitlist')
+          .select('id,email,invite_expires_at')
+          .eq('invite_hash', hashToken(input.invite))
+          .maybeSingle();
+        if (!lead || !lead.invite_expires_at || Date.parse(lead.invite_expires_at) < Date.now()) throw new HttpError(403, 'INVITE_INVALID');
+        if (lead.email.toLowerCase() !== input.email.toLowerCase()) throw new HttpError(403, 'INVITE_EMAIL_MISMATCH');
+        leadId = lead.id;
+      }
       const { data: signed, error } = await db.auth.signUp({
         email: input.email,
         password: input.password,
@@ -65,6 +91,11 @@ export async function POST(request: Request) {
           .from('legal_acceptances')
           .insert((['terms', 'privacy', 'dpa'] as const).map((document) => ({ user_id: signed.user!.id, document, version: LEGAL_VERSION, ip_hash: ip })));
       }
+      if (leadId)
+        await supabaseAdmin()
+          .from('waitlist')
+          .update({ status: 'customer', invite_hash: null, updated_at: new Date().toISOString() })
+          .eq('id', leadId);
       await logActivity(request, { action: 'auth.signup', details: { email: input.email.toLowerCase() } });
       return json({ ok: true });
     }

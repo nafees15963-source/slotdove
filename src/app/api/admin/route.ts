@@ -302,6 +302,21 @@ export async function POST(request: Request) {
                 min_notice_minutes: z.number().int().min(0).max(10080),
                 max_advance_days: z.number().int().min(1).max(365),
                 slot_interval: z.number().int().min(5).max(120),
+                address: text(300),
+                description: text(1000),
+                timezone: z.string().max(60).refine((tz) => {
+                  try {
+                    new Intl.DateTimeFormat('en', { timeZone: tz });
+                    return true;
+                  } catch {
+                    return false;
+                  }
+                }),
+                currency: z.enum(['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD', 'INR']),
+                brand_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+                auto_confirm: z.boolean(),
+                notifications_enabled: z.boolean(),
+                cancellation_hours: z.number().int().min(0).max(720),
               })
               .partial(),
           })
@@ -474,7 +489,7 @@ export async function POST(request: Request) {
         const v = z
           .object({
             id: z.uuid(),
-            status: z.enum(['new', 'contacted', 'demo', 'customer', 'declined']).optional(),
+            status: z.enum(['new', 'contacted', 'approved', 'demo', 'customer', 'declined']).optional(),
             plan_interest: z.enum(['free', 'pro', 'business', 'unsure']).optional(),
             admin_notes: text(4000).optional(),
           })
@@ -501,6 +516,42 @@ export async function POST(request: Request) {
         await sendEmail({ ...noticeEmail({ locale: lead.locale, title: v.subject, lines: v.message.split(/\n+/) }), to: lead.email, idempotencyKey: `wl-${v.id}-${Date.now()}` });
         await db.from('waitlist').update({ status: lead.status === 'new' ? 'contacted' : lead.status, contacted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', v.id);
         await audit('waitlist.emailed', null, { id: v.id });
+        break;
+      }
+      case 'waitlist-approve': {
+        // Approves a pre-registration: personal sign-up link (token stored only as hash), valid 14 days.
+        const v = z.object({ id: z.uuid(), days: z.number().int().min(1).max(60).default(14) }).parse(input);
+        const { data: lead } = await db.from('waitlist').select('id,email,locale,contact_name,company').eq('id', v.id).single();
+        if (!lead) throw new HttpError(404, 'NOT_FOUND');
+        const token = newToken();
+        const expires = new Date(Date.now() + v.days * 86400000).toISOString();
+        const { error } = await db
+          .from('waitlist')
+          .update({ status: 'approved', invite_hash: hashToken(token), invite_expires_at: expires, approved_at: new Date().toISOString(), contacted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', v.id);
+        if (error) throw error;
+        const origin = process.env.NEXT_PUBLIC_SITE_URL?.startsWith('http') ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '') : new URL(request.url).origin;
+        const url = `${origin}/signup#invite=${token}`;
+        let emailed = false;
+        if (emailConfigured()) {
+          const de = lead.locale !== 'en';
+          const until = new Intl.DateTimeFormat(de ? 'de' : 'en', { dateStyle: 'long' }).format(new Date(expires));
+          const r = await sendEmail({
+            ...noticeEmail({
+              locale: lead.locale,
+              title: de ? 'Ihr Zugang zu Slotdove ist freigeschaltet' : 'Your Slotdove access is approved',
+              lines: de
+                ? [`Hallo ${lead.contact_name},`, `wir freuen uns: Ihre Voranmeldung für ${lead.company} ist bestätigt. Über den Button unten erstellen Sie Ihr Konto – bitte mit genau dieser E-Mail-Adresse.`, 'Slotdove ist in der Startphase komplett kostenlos – kein Abo, keine Zahlungsdaten, keine automatische Verlängerung.', `Der Link ist persönlich und gilt bis ${until}. Bitte nicht weitergeben.`]
+                : [`Hello ${lead.contact_name},`, `your pre-registration for ${lead.company} is approved. Create your account with the button below – please use this exact email address.`, 'Slotdove is completely free during the launch phase – no subscription, no payment details.', `The link is personal and valid until ${until}.`],
+              cta: { label: de ? 'Konto erstellen' : 'Create account', url },
+            }),
+            to: lead.email,
+            idempotencyKey: `wl-approve-${v.id}-${expires.slice(0, 13)}`,
+          }).catch(() => ({ state: 'failed' as const }));
+          emailed = r.state === 'accepted';
+        }
+        await audit('waitlist.approved', null, { id: v.id, emailed });
+        result = { ok: true, url, emailed };
         break;
       }
       case 'waitlist-demo': {

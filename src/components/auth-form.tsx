@@ -33,6 +33,7 @@ export function AuthForm({
         password: f.get('password') || undefined,
         name: f.get('name') || undefined,
         legal: mode === 'signup' ? f.get('legal') === 'on' : undefined,
+        invite: mode === 'signup' ? new URLSearchParams(location.hash.slice(1)).get('invite') || undefined : undefined,
       });
       if (mode === 'update' && new URLSearchParams(location.search).get('first')) {
         router.push('/dashboard');
@@ -216,9 +217,8 @@ export function AuthForm({
                   </span>
                 </label>
               )}
-              {mode === 'update' && (
-                <FirstLoginNotice locale={locale} />
-              )}
+              {mode === 'update' && <FirstLoginNotice locale={locale} />}
+              {mode === 'signup' && <InviteNotice locale={locale} />}
               {error && (
                 <p className="notice notice-error" role="alert" style={{ margin: '18px 0' }}>
                   {error}
@@ -265,6 +265,24 @@ function FirstLoginNotice({ locale }: { locale: string }) {
       {locale === 'de'
         ? 'Willkommen! Dein Zugang wurde von deinem Betrieb angelegt. Bitte vergib aus Sicherheitsgründen jetzt ein eigenes Passwort.'
         : 'Welcome! Your account was created by your business. Please choose your own password now.'}
+    </p>
+  );
+}
+
+function InviteNotice({ locale }: { locale: string }) {
+  const [invited] = useState(() => typeof window === 'undefined' || new URLSearchParams(window.location.hash.slice(1)).has('invite'));
+  if (invited) return null;
+  return (
+    <p className="notice" style={{ margin: '14px 0', fontSize: 12.5 }}>
+      {locale === 'de' ? (
+        <>
+          In der Startphase ist die Registrierung nur mit einem persönlichen Link oder einer Team-Einladung möglich. Noch nichts davon? <Link href="/#warteliste">Hier kostenlos voranmelden</Link>.
+        </>
+      ) : (
+        <>
+          During the launch phase you need a personal link to sign up. <Link href="/#warteliste">Pre-register here</Link>.
+        </>
+      )}
     </p>
   );
 }

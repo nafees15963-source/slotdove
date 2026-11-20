@@ -5,6 +5,7 @@ import { noticeEmail, sendEmail } from '@/lib/email';
 import { generatePassword } from '@/lib/trust';
 import { text } from '@/lib/sanitize';
 import { csv } from '@/lib/utils';
+import { safeSupportUrl } from '@/lib/release';
 
 /** Trust & safety, GDPR requests, blocklist, statistics, platform switches and user security actions. */
 const audit = (actor: string, action: string, details: Record<string, unknown>, business_id?: string | null) =>
@@ -292,6 +293,28 @@ export async function POST(request: Request) {
       const { error } = await db.from('platform_settings').upsert({ key: v.key, value, updated_by: user.id, updated_at: new Date().toISOString() });
       if (error) throw error;
       await audit(user.id, 'platform.setting', { key: v.key, ...value });
+      return json({ ok: true });
+    }
+
+    if (action === 'release') {
+      const v = z
+        .object({ free_from: z.iso.date(), free_until: z.iso.date(), invite_only: z.boolean() })
+        .refine((x) => x.free_until >= x.free_from, { message: 'END_BEFORE_START' })
+        .parse(input);
+      const { error } = await db.from('platform_settings').upsert({ key: 'release', value: v, updated_by: user.id, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      await audit(user.id, 'platform.release', v);
+      return json({ ok: true });
+    }
+    if (action === 'support') {
+      const v = z.object({ enabled: z.boolean(), url: z.string().max(300).default(''), text: z.string().max(300).default('') }).parse(input);
+      const url = v.url ? safeSupportUrl(v.url.trim()) : '';
+      if (v.url && !url) throw new HttpError(400, 'SUPPORT_URL_INVALID');
+      if (v.enabled && !url) throw new HttpError(400, 'SUPPORT_URL_INVALID');
+      const value = { enabled: v.enabled, url, text: v.text.replace(/[<>]/g, '').trim() };
+      const { error } = await db.from('platform_settings').upsert({ key: 'support', value, updated_by: user.id, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      await audit(user.id, 'platform.support', value);
       return json({ ok: true });
     }
 

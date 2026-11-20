@@ -30,7 +30,7 @@ export default async function Page({ params }: { params: Promise<{ info: string 
           </section>
         ))}
         {['about', 'contact'].includes(info) && (
-          <Link href="/signup" className="btn btn-primary" style={{ justifySelf: 'start' }}>
+          <Link href="/#warteliste" className="btn btn-primary" style={{ justifySelf: 'start' }}>
             {t.start}
           </Link>
         )}

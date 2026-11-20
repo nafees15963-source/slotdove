@@ -3,7 +3,7 @@ import { createHmac, randomInt } from 'node:crypto';
 import { supabaseAdmin } from './supabase/admin';
 
 /** Current version of AGB / Datenschutz / AVV. Bump when the texts change materially. */
-export const LEGAL_VERSION = '2026-11-20';
+export const LEGAL_VERSION = '2026-11-20.2';
 
 /** Strong, readable one-time password (no ambiguous characters). */
 export function generatePassword(length = 16) {
@@ -53,10 +53,10 @@ export async function isBlocked({ email, request }: { email?: string | null; req
   }
 }
 
-type Setting = { enabled?: boolean; message?: string };
+type Setting = { enabled?: boolean; message?: string; invite_only?: boolean; free_from?: string; free_until?: string };
 /** Public platform switches set in the admin panel (maintenance, signups, public booking). */
-export async function platformSetting(key: 'maintenance' | 'signups' | 'public_booking'): Promise<Setting> {
-  const fallback = key === 'maintenance' ? { enabled: false, message: '' } : { enabled: true };
+export async function platformSetting(key: 'maintenance' | 'signups' | 'public_booking' | 'release'): Promise<Setting> {
+  const fallback = key === 'maintenance' ? { enabled: false, message: '' } : key === 'release' ? { invite_only: true } : { enabled: true };
   if (!process.env.SUPABASE_SECRET_KEY) return fallback;
   try {
     const { data } = await supabaseAdmin().from('platform_settings').select('value').eq('key', key).maybeSingle();

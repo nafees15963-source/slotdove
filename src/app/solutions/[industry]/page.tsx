@@ -79,7 +79,7 @@ export default async function Page({ params }: { params: Promise<{ industry: str
           <div className="eyebrow">{t.solutions}</div>
           <h1 style={{ margin: '25px 0' }}>{title}</h1>
           <p>{description}</p>
-          <Link className="btn btn-primary btn-lg" style={{ marginTop: 30 }} href="/signup">
+          <Link className="btn btn-primary btn-lg" style={{ marginTop: 30 }} href="/#warteliste">
             {t.start}
             <ArrowRight size={15} />
           </Link>

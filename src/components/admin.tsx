@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -37,12 +37,13 @@ import {
   Users,
   X,
   BarChart3,
+  Check,
   FileLock2,
   Power,
   ShieldAlert,
 } from 'lucide-react';
 import { Brand } from './brand';
-import { BlocklistDesk, CreateUserButton, DsrDesk, GlobalSearch, PlatformDesk, ReportsDesk, StatsDesk, UserSecurity } from './admin-trust';
+import { BlocklistDesk, CreateUserButton, DsrDesk, GlobalSearch, PlatformDesk, ReleaseDesk, ReportsDesk, StatsDesk, UserSecurity } from './admin-trust';
 import { Preferences } from './preferences';
 import { Button } from './ui/button';
 import { Dialog } from './ui/dialog';
@@ -176,19 +177,19 @@ function AdminConsole() {
   const emailOf = useMemo(() => new Map((data?.accounts || []).map((a) => [a.id, a.email || a.id.slice(0, 8)])), [data]);
   const nameOf = useMemo(() => new Map((data?.businesses || []).map((b) => [b.id, b.name])), [data]);
   const openReports = data?.reports.filter((r) => r.status === 'open') || [];
-  const nav: [Tab, typeof LayoutDashboard, string, number?][] = [
-    ['overview', LayoutDashboard, de ? 'Übersicht' : 'Overview'],
+  const nav: [Tab, typeof LayoutDashboard, string, number?, string?][] = [
+    ['overview', LayoutDashboard, de ? 'Übersicht' : 'Overview', undefined, de ? 'Allgemein' : 'General'],
     ['search', Search, de ? 'Globale Suche' : 'Global search'],
     ['stats', BarChart3, de ? 'Statistik' : 'Statistics'],
-    ['support', LifeBuoy, de ? 'Support-Panel' : 'Support desk', data?.tickets.filter((t) => !['resolved', 'closed'].includes(t.status) && t.last_reply_by === 'user').length || undefined],
-    ['businesses', Building2, de ? 'Unternehmen' : 'Businesses', data?.businesses.length],
+    ['businesses', Building2, de ? 'Unternehmen' : 'Businesses', data?.businesses.length, de ? 'Kunden' : 'Customers'],
     ['users', Users, de ? 'Benutzer' : 'Users', data?.risks.filter((r) => r.score >= 0.5).length || undefined],
-    ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined],
+    ['waitlist', ListChecks, de ? 'Voranmeldungen' : 'Pre-registrations', data?.waitlistNew || undefined],
+    ['support', LifeBuoy, de ? 'Support-Panel' : 'Support desk', data?.tickets.filter((t) => !['resolved', 'closed'].includes(t.status) && t.last_reply_by === 'user').length || undefined],
+    ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined, de ? 'Sicherheit & Recht' : 'Trust & legal'],
     ['reports', Flag, de ? 'Meldungen (DSA)' : 'Reports (DSA)'],
     ['gdpr', FileLock2, de ? 'DSGVO-Anfragen' : 'GDPR requests'],
     ['blocklist', ShieldAlert, de ? 'Sperrliste' : 'Blocklist'],
-    ['platform', Power, de ? 'Plattform-Schalter' : 'Platform switches'],
-    ['waitlist', ListChecks, de ? 'Warteliste' : 'Waitlist', data?.waitlistNew || undefined],
+    ['platform', Power, de ? 'Plattform & Release' : 'Platform & release', undefined, 'System'],
     ['features', FlaskConical, de ? 'Beta & Funktionen' : 'Beta & features'],
     ['email', Mail, de ? 'System & E-Mail' : 'System & email'],
     ['announcements', Megaphone, de ? 'Mitteilungen' : 'Announcements'],
@@ -204,12 +205,15 @@ function AdminConsole() {
           </span>
         </div>
         <nav>
-          {nav.map(([key, Icon, label, count]) => (
-            <button key={key} className={`admin-nav ${tab === key ? 'on' : ''}`} onClick={() => setTab(key)}>
-              <Icon size={17} />
-              {label}
-              {!!count && <span className="admin-count">{count}</span>}
-            </button>
+          {nav.map(([key, Icon, label, count, group]) => (
+            <Fragment key={key}>
+              {group && <div className="admin-nav-group">{group}</div>}
+              <button className={`admin-nav ${tab === key ? 'on' : ''}`} onClick={() => setTab(key)}>
+                <Icon size={17} />
+                {label}
+                {!!count && <span className="admin-count">{count}</span>}
+              </button>
+            </Fragment>
           ))}
         </nav>
         <div className="admin-side-bottom">
@@ -352,7 +356,12 @@ function AdminConsole() {
         {tab === 'reports' && <ReportsDesk nameOf={nameOf} />}
         {tab === 'gdpr' && <DsrDesk />}
         {tab === 'blocklist' && <BlocklistDesk />}
-        {tab === 'platform' && <PlatformDesk />}
+        {tab === 'platform' && (
+          <>
+            <ReleaseDesk />
+            <PlatformDesk />
+          </>
+        )}
         {data && tab === 'moderation' && <Moderation data={data} action={action} nameOf={nameOf} />}
         {data && tab === 'features' && <Features data={data} action={action} />}
         {data && tab === 'announcements' && <Announcements data={data} action={action} nameOf={nameOf} />}
@@ -860,6 +869,11 @@ function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: st
             </div>
             {tab === 'edit' && (
               <>
+                <p className="notice" style={{ fontSize: 12.5 }}>
+                  {de
+                    ? 'Hier änderst du alle Betriebsdaten direkt. Für Leistungen, Team, Arbeitszeiten, Kunden und Termine nutze oben „Alles bearbeiten (Supportmodus)“ – du arbeitest dann 2 Stunden mit Inhaber-Rechten im Dashboard des Betriebs. Jede Änderung wird protokolliert.'
+                    : 'Edit all business data here. For services, team, hours, customers and bookings use “Edit everything (support mode)” above. Every change is logged.'}
+                </p>
                 <form
                   className="form-grid"
                   onSubmit={(e) => {
@@ -873,22 +887,42 @@ function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: st
                         slug: f.slug,
                         email: f.email,
                         phone: f.phone,
+                        address: f.address,
+                        description: f.description,
                         industry: f.industry,
                         locale: f.locale,
+                        timezone: f.timezone,
+                        currency: f.currency,
+                        brand_color: f.brand_color,
                         published: f.published === 'on',
+                        auto_confirm: f.auto_confirm === 'on',
+                        notifications_enabled: f.notifications_enabled === 'on',
                         min_notice_minutes: Number(f.min_notice_minutes),
                         max_advance_days: Number(f.max_advance_days),
                         slot_interval: Number(f.slot_interval),
+                        cancellation_hours: Number(f.cancellation_hours),
                       },
                     });
                   }}
                 >
-                  {(['name', 'slug', 'email', 'phone'] as const).map((k) => (
+                  {(
+                    [
+                      ['name', de ? 'Name' : 'Name', 'text'],
+                      ['slug', de ? 'Link-Name (/b/…)' : 'Slug', 'text'],
+                      ['email', 'E-Mail', 'email'],
+                      ['phone', de ? 'Telefon' : 'Phone', 'tel'],
+                      ['address', de ? 'Adresse' : 'Address', 'text'],
+                    ] as const
+                  ).map(([k, label, type]) => (
                     <div className="field" key={k}>
-                      <label htmlFor={`ab-${k}`}>{k}</label>
-                      <input id={`ab-${k}`} name={k} defaultValue={String(b[k] ?? '')} />
+                      <label htmlFor={`ab-${k}`}>{label}</label>
+                      <input id={`ab-${k}`} name={k} type={type} defaultValue={String(b[k as keyof typeof b] ?? '')} />
                     </div>
                   ))}
+                  <div className="field full">
+                    <label htmlFor="ab-desc">{de ? 'Beschreibung (Buchungsseite)' : 'Description'}</label>
+                    <textarea id="ab-desc" name="description" maxLength={1000} defaultValue={String((b as Record<string, unknown>).description ?? '')} />
+                  </div>
                   <div className="field">
                     <label htmlFor="ab-ind">{de ? 'Branche' : 'Industry'}</label>
                     <select id="ab-ind" name="industry" defaultValue={industryById(b.industry).id}>
@@ -906,17 +940,46 @@ function BusinessDrawer({ id, data, onClose, action, emailOf, onUser }: { id: st
                       <option value="en">English</option>
                     </select>
                   </div>
-                  {(['min_notice_minutes', 'max_advance_days', 'slot_interval'] as const).map((k) => (
+                  <div className="field">
+                    <label htmlFor="ab-tz">{de ? 'Zeitzone' : 'Time zone'}</label>
+                    <input id="ab-tz" name="timezone" defaultValue={String((b as Record<string, unknown>).timezone ?? 'Europe/Berlin')} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="ab-cur">{de ? 'Währung' : 'Currency'}</label>
+                    <select id="ab-cur" name="currency" defaultValue={String((b as Record<string, unknown>).currency ?? 'EUR')}>
+                      {['EUR', 'CHF', 'USD', 'GBP', 'CAD', 'AUD', 'INR'].map((c) => (
+                        <option key={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="ab-col">{de ? 'Markenfarbe' : 'Brand colour'}</label>
+                    <input id="ab-col" name="brand_color" type="color" defaultValue={String((b as Record<string, unknown>).brand_color ?? '#0d7f79')} />
+                  </div>
+                  {(
+                    [
+                      ['min_notice_minutes', de ? 'Mindestvorlauf (Min.)' : 'Min. notice (min)', 0, 10080],
+                      ['max_advance_days', de ? 'Max. im Voraus (Tage)' : 'Max. advance (days)', 1, 365],
+                      ['slot_interval', de ? 'Terminraster (Min.)' : 'Slot interval (min)', 5, 120],
+                      ['cancellation_hours', de ? 'Stornofrist (Std.)' : 'Cancellation (h)', 0, 720],
+                    ] as const
+                  ).map(([k, label, min, max]) => (
                     <div className="field" key={k}>
-                      <label htmlFor={`ab-${k}`}>{k}</label>
-                      <input id={`ab-${k}`} name={k} type="number" defaultValue={Number(b[k])} />
+                      <label htmlFor={`ab-${k}`}>{label}</label>
+                      <input id={`ab-${k}`} name={k} type="number" min={min} max={max} defaultValue={Number((b as Record<string, unknown>)[k] ?? 0)} />
                     </div>
                   ))}
                   <label className="check-label">
                     <input type="checkbox" name="published" defaultChecked={b.published} /> {de ? 'Buchungsseite online' : 'Booking page online'}
                   </label>
+                  <label className="check-label">
+                    <input type="checkbox" name="auto_confirm" defaultChecked={(b as Record<string, unknown>).auto_confirm !== false} /> {de ? 'Buchungen automatisch bestätigen' : 'Auto-confirm bookings'}
+                  </label>
+                  <label className="check-label">
+                    <input type="checkbox" name="notifications_enabled" defaultChecked={(b as Record<string, unknown>).notifications_enabled !== false} /> {de ? 'E-Mail-Benachrichtigungen an Kunden' : 'Customer email notifications'}
+                  </label>
                   <div className="form-actions full">
-                    <Button>{de ? 'Speichern' : 'Save'}</Button>
+                    <Button>{de ? 'Alles speichern' : 'Save all'}</Button>
                   </div>
                 </form>
                 <div className="field">
@@ -1688,7 +1751,7 @@ type Lead = {
   plan_interest: 'free' | 'pro' | 'business' | 'unsure';
   interest: 'demo' | 'subscription' | 'info';
   message: string;
-  status: 'new' | 'contacted' | 'demo' | 'customer' | 'declined';
+  status: 'new' | 'contacted' | 'approved' | 'demo' | 'customer' | 'declined';
   admin_notes: string;
   demo_until: string | null;
   contacted_at: string | null;
@@ -1699,6 +1762,7 @@ type Lead = {
 const leadStatus: Record<Lead['status'], [string, string, string]> = {
   new: ['Neu', 'New', 'badge-purple'],
   contacted: ['Kontaktiert', 'Contacted', 'badge-amber'],
+  approved: ['Bestätigt – Link verschickt', 'Approved – link sent', 'badge-green'],
   demo: ['Demo läuft', 'Trial running', 'badge-green'],
   customer: ['Kunde', 'Customer', 'badge-green'],
   declined: ['Abgesagt', 'Declined', 'badge-red'],
@@ -1822,6 +1886,7 @@ function LeadDrawer({ lead, onClose, action, reload }: { lead: Lead; onClose: ()
   const [notes, setNotes] = useState(lead.admin_notes);
   const [plan, setPlan] = useState<'free' | 'pro' | 'business'>(lead.plan_interest === 'unsure' ? 'pro' : lead.plan_interest);
   const [days, setDays] = useState(14);
+  const [invite, setInvite] = useState('');
   const [subject, setSubject] = useState(de ? 'Ihr Interesse an Slotdove' : 'Your interest in Slotdove');
   const [message, setMessage] = useState(
     de
@@ -1881,6 +1946,30 @@ function LeadDrawer({ lead, onClose, action, reload }: { lead: Lead; onClose: ()
               ))}
             </select>
           </label>
+          <section className="lead-box">
+            <strong>{de ? 'Voranmeldung bestätigen' : 'Approve pre-registration'}</strong>
+            <small className="muted">
+              {de
+                ? 'Erstellt einen persönlichen Registrierungslink (14 Tage gültig, nur mit dieser E-Mail nutzbar) und schickt ihn per E-Mail. Ohne Freigabe kann sich niemand registrieren.'
+                : 'Creates a personal sign-up link (valid 14 days, only for this email) and emails it.'}
+            </small>
+            <Button
+              onClick={async () => {
+                const r = await run({ action: 'waitlist-approve', id: lead.id }, de ? 'Bestätigt' : 'Approved');
+                if (r?.url) {
+                  setInvite(String(r.url));
+                  if (!r.emailed) toast.message(de ? 'E-Mail-Versand nicht eingerichtet – Link unten kopieren und selbst schicken.' : 'Email not configured – copy the link below.');
+                }
+              }}
+            >
+              <Check size={14} /> {lead.status === 'approved' ? (de ? 'Neuen Link senden' : 'Send new link') : de ? 'Bestätigen & Link senden' : 'Approve & send link'}
+            </Button>
+            {invite && (
+              <pre className="secret-box" onClick={() => navigator.clipboard.writeText(invite).then(() => toast.success(de ? 'Kopiert' : 'Copied'))}>
+                {invite}
+              </pre>
+            )}
+          </section>
           <section className="lead-box">
             <strong>{de ? 'Kostenlose Demo starten' : 'Start free trial'}</strong>
             <small className="muted">

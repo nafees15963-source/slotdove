@@ -37,6 +37,22 @@ export function friendlyError(error: unknown, locale: string) {
       'Online booking is paused for maintenance. Please try again later.',
       'Online-Buchungen sind wegen Wartung kurz pausiert. Bitte versuche es später erneut.',
     ],
+    INVITE_REQUIRED: [
+      'Registration is by approval only. Please pre-register on the homepage – we will send you a personal link.',
+      'Die Registrierung ist nur nach Freigabe möglich. Bitte melde dich auf der Startseite vor – du bekommst dann einen persönlichen Link.',
+    ],
+    INVITE_INVALID: [
+      'This registration link is invalid or expired. Please contact us.',
+      'Dieser Registrierungslink ist ungültig oder abgelaufen. Bitte melde dich bei uns.',
+    ],
+    INVITE_EMAIL_MISMATCH: [
+      'Please use the email address you pre-registered with.',
+      'Bitte nutze die E-Mail-Adresse, mit der du dich vorangemeldet hast.',
+    ],
+    SUPPORT_URL_INVALID: [
+      'Please enter an https link from PayPal, Ko-fi, Buy Me a Coffee or Stripe.',
+      'Bitte einen https-Link von PayPal (paypal.me), Ko-fi, Buy Me a Coffee oder Stripe eingeben.',
+    ],
     LEGAL_REQUIRED: [
       'Please accept the terms and the data processing agreement.',
       'Bitte akzeptiere die AGB und den Auftragsverarbeitungsvertrag.',

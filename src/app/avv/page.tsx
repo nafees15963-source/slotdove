@@ -198,13 +198,13 @@ export default function Page() {
       </ul>
       <h3>3. Verfügbarkeit und Belastbarkeit (Art. 32 Abs. 1 lit. b, c DSGVO)</h3>
       <ul>
-        <li>Tägliche automatische Datenbank-Backups durch den Hosting-Anbieter, redundante Infrastruktur, Schutz vor DDoS-Angriffen auf Netzwerkebene, Ratenbegrenzung öffentlicher Schnittstellen.</li>
-        <li>Rasche Wiederherstellbarkeit durch Backups und versionierte Bereitstellungen (Rollback).</li>
+        <li>Datensicherungen nach den Möglichkeiten des jeweiligen Tarifs des Datenbank-Anbieters bzw. eigene verschlüsselte Sicherungen, redundante Infrastruktur der Anbieter, Schutz vor DDoS-Angriffen auf Netzwerkebene, Ratenbegrenzung öffentlicher Schnittstellen.</li>
+        <li>Rasche Wiederherstellbarkeit durch Datensicherungen, Datenbank-Migrationen unter Versionskontrolle und versionierte Bereitstellungen (Rollback).</li>
       </ul>
       <h3>4. Verfahren zur regelmäßigen Überprüfung (Art. 32 Abs. 1 lit. d DSGVO)</h3>
       <ul>
         <li>Automatisierte Tests der Datenbank-Sicherheitsregeln, Prüfung auf versehentlich veröffentlichte Geheimnisse vor jeder Veröffentlichung, Abhängigkeitsupdates, Sicherheitshinweise der Datenbank.</li>
-        <li>Datenschutzfreundliche Voreinstellungen (Art. 25 DSGVO): keine Tracking-Cookies, keine Werbung, Datenminimierung, automatische Löschfristen.</li>
+        <li>Datenschutzfreundliche Voreinstellungen (Art. 25 DSGVO): keine Tracking-Cookies, keine Werbung, Datenminimierung, automatische nächtliche Löschung abgelaufener Daten nach festen Fristen.</li>
         <li>Incident-Response-Prozess mit Meldung an Verantwortliche innerhalb von 24 Stunden.</li>
       </ul>
 

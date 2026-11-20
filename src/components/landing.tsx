@@ -6,10 +6,16 @@ import { WaitlistForm } from './waitlist-form';
 import { getLocale } from '@/lib/i18n/server';
 import { industries } from '@/lib/industries';
 import { PLAN_DEFAULTS } from '@/lib/billing';
+import { dateDe, publicSettings } from '@/lib/release';
+import { SupportCard } from './support-card';
 
 export async function Landing() {
   const locale = await getLocale();
   const de = locale === 'de';
+  const { release, support } = await publicSettings();
+  const from = dateDe(release.free_from),
+    until = dateDe(release.free_until),
+    after = String(Number(release.free_until.slice(0, 4)) + 1);
   const features = [
     { visual: 'quick-add', title: de ? 'Termin in einem Satz' : 'Book in one sentence', text: de ? '„Morgen 14 Uhr Haarschnitt Anna“ – die eingebaute KI füllt alles aus. Läuft lokal, ohne Cloud-KI.' : '“Tomorrow 2pm haircut Anna” – the built-in AI fills everything in. Runs locally.', big: true },
     { visual: 'week-plan', title: de ? 'Wochenplan in 10 Sekunden' : 'Week plan in 10 seconds', text: de ? 'Tage anklicken, Pause einfügen, auf alle Werktage kopieren.' : 'Toggle days, add a break, copy to all weekdays.' },
@@ -28,17 +34,23 @@ export async function Landing() {
         ['Brauche ich technische Kenntnisse?', 'Nein. Du wählst deine Branche, gibst einen Namen ein und klickst deine Öffnungszeiten an. Jede Seite hat ein eigenes kurzes Tutorial.'],
         ['Muss ich Mitarbeiter anlegen?', 'Nein. Du kannst sofort Termine eintragen und Mitarbeiter später zuordnen – oder ganz alleine arbeiten.'],
         ['Wie funktioniert die KI ohne Cloud?', 'Die Slotdove KI läuft direkt in deinem Browser. Sie versteht Termine in normaler Sprache, beantwortet Fragen zu deinem Kalender und gibt Tipps – deine Daten gehen an keinen KI-Anbieter.'],
-        ['Zahle ich Provision pro Buchung?', 'Nein. Du zahlst einen festen Monatspreis ab 5 €. Keine Provision, keine versteckten Kosten.'],
+        ['Was kostet Slotdove?', `Vom ${from} bis ${until} nichts – alle Funktionen sind kostenlos. Es gibt kein Abo, du gibst keine Zahlungsdaten an und nichts verlängert sich automatisch.`],
+        ['Was passiert nach der Gratis-Phase?', `Ab ${after} gelten voraussichtlich die Tarife unten (ab 5 € im Monat). Wir informieren dich rechtzeitig vorher. Du entscheidest dann selbst, ob du weitermachst – ohne Zustimmung entstehen keine Kosten.`],
+        ['Zahle ich Provision pro Buchung?', 'Nein. Keine Provision, keine versteckten Kosten.'],
+        ['Wie bekomme ich Zugang?', 'Melde dich unten kostenlos vor. Wir prüfen jede Anmeldung persönlich und schicken dir dann einen persönlichen Registrierungslink.'],
         ['Ist das DSGVO-konform?', 'Daten liegen in einer EU-Datenbank (Frankfurt). Kunden können ihre Daten exportieren oder anonymisieren lassen.'],
-        ['Kann ich jederzeit kündigen?', 'Ja, monatlich kündbar.'],
+        ['Muss ich kündigen?', 'Nein. In der Gratis-Phase gibt es nichts zu kündigen. Du kannst dein Konto jederzeit selbst löschen.'],
       ]
     : [
         ['Do I need technical skills?', 'No. Pick your industry, enter a name and click your opening hours. Every page has its own short tutorial.'],
         ['Do I have to add staff?', 'No. Add appointments right away and assign staff later – or work alone.'],
         ['How does the AI work without the cloud?', 'Slotdove AI runs in your browser. It understands appointments in plain language and answers questions – your data never goes to an AI vendor.'],
-        ['Do I pay commission per booking?', 'No. A fixed monthly price from €5. No commission, no hidden fees.'],
+        ['What does Slotdove cost?', `Nothing from ${from} to ${until} – every feature is free. No subscription, no payment details, nothing renews automatically.`],
+        ['What happens after the free phase?', `From ${after} the plans below will most likely apply (from €5/month). We will tell you in advance; nothing is charged without your consent.`],
+        ['Do I pay commission per booking?', 'No commission, no hidden fees.'],
+        ['How do I get access?', 'Pre-register below. We review every request personally and send you a personal sign-up link.'],
         ['Is it GDPR compliant?', 'Data is stored in an EU database (Frankfurt). Customers can export or anonymise their data.'],
-        ['Can I cancel anytime?', 'Yes, monthly.'],
+        ['Do I need to cancel?', 'No. There is nothing to cancel during the free phase. You can delete your account at any time.'],
       ];
   const row = industries.filter((i) => i.id !== 'other');
   return (
@@ -50,7 +62,7 @@ export async function Landing() {
           <div className="market-container l-hero-grid">
             <div className="l-hero-copy">
               <span className="l-pill">
-                <Sparkles size={14} /> {de ? 'Bald verfügbar · Frühzugang für ausgewählte Betriebe' : 'Coming soon · early access for selected businesses'}
+                <Sparkles size={14} /> {de ? `Ab ${from} komplett kostenlos · Voranmeldung offen` : `Completely free from ${from} · pre-registration open`}
               </span>
               <h1>
                 {de ? 'Termine planen.' : 'Scheduling,'}
@@ -59,12 +71,12 @@ export async function Landing() {
               </h1>
               <p>
                 {de
-                  ? 'Online-Buchung, Kalender, Kunden-Chat und Erinnerungen für kleine Unternehmen. In 2 Minuten eingerichtet – ohne Schulung, ohne Provision.'
-                  : 'Online booking, calendar, customer chat and reminders for small businesses. Set up in 2 minutes – no training, no commission.'}
+                  ? `Online-Buchung, Kalender, Kunden-Chat und Erinnerungen für kleine Unternehmen. Vom ${from} bis ${until} kostenlos – kein Abo, keine Zahlungsdaten.`
+                  : `Online booking, calendar, customer chat and reminders for small businesses. Free from ${from} to ${until} – no subscription, no payment details.`}
               </p>
               <div className="l-cta">
                 <Link className="btn btn-light btn-lg" href="#warteliste">
-                  {de ? 'Frühzugang sichern' : 'Get early access'} <ArrowRight size={16} />
+                  {de ? 'Kostenlos voranmelden' : 'Pre-register for free'} <ArrowRight size={16} />
                 </Link>
                 <Link className="btn btn-glass btn-lg" href="#features">
                   {de ? 'Funktionen ansehen' : 'See features'}
@@ -72,10 +84,10 @@ export async function Landing() {
               </div>
               <div className="l-trust">
                 <span>
-                  <Check size={14} /> {de ? 'Ab 5 € im Monat' : 'From €5/month'}
+                  <Check size={14} /> {de ? `Bis ${until} gratis` : `Free until ${until}`}
                 </span>
                 <span>
-                  <Check size={14} /> {de ? 'Keine Provision' : 'No commission'}
+                  <Check size={14} /> {de ? 'Kein Abo, keine Zahlungsdaten' : 'No subscription, no payment details'}
                 </span>
                 <span>
                   <Check size={14} /> {de ? 'Server in der EU' : 'EU servers'}
@@ -227,12 +239,24 @@ export async function Landing() {
         <section className="market-container l-section" id="pricing">
           <div className="l-intro">
             <span className="eyebrow">{de ? 'Preise' : 'Pricing'}</span>
-            <h2>{de ? 'Faire Preise. Ohne Kleingedrucktes.' : 'Fair prices. No small print.'}</h2>
+            <h2>{de ? `${release.free_from.slice(0, 4)}: alles kostenlos.` : `${release.free_from.slice(0, 4)}: everything free.`}</h2>
+            <p>
+              {de
+                ? `Vom ${from} bis ${until} nutzt du alle Funktionen für 0 € – ohne Abo, ohne Zahlungsdaten, ohne automatische Verlängerung. Danach gelten voraussichtlich diese Tarife. Wir sagen dir rechtzeitig Bescheid, und du entscheidest selbst.`
+                : `From ${from} to ${until} every feature is €0 – no subscription, no payment details, no auto-renewal. Afterwards these plans will most likely apply. We will tell you in advance and you decide.`}
+            </p>
+          </div>
+          <div className="free-banner">
+            <strong>0 €</strong>
+            <span>
+              {de ? `alle Funktionen · ${from} – ${until}` : `all features · ${from} – ${until}`}
+              <small>{de ? 'Kein Abo · nichts zu kündigen · keine Kreditkarte' : 'No subscription · nothing to cancel · no card'}</small>
+            </span>
           </div>
           <div className="plan-grid">
             {plans.map((p) => (
               <div key={p.id} className={`plan-card ${p.hot ? 'featured' : ''}`}>
-                {p.hot && <span className="badge badge-purple">{de ? 'Beliebt' : 'Popular'}</span>}
+                <span className="badge">{de ? `voraussichtlich ab ${after}` : `expected from ${after}`}</span>
                 <h3>{PLAN_DEFAULTS[p.id].name}</h3>
                 <div className="plan-price">
                   <strong>{PLAN_DEFAULTS[p.id].monthlyPriceCents / 100} €</strong>
@@ -246,21 +270,26 @@ export async function Landing() {
                   ))}
                 </ul>
                 <Link className={`btn ${p.hot ? 'btn-primary' : 'btn-outline'}`} href={`/?plan=${p.id}#warteliste`}>
-                  {de ? '14 Tage kostenlos testen' : '14-day free trial'}
+                  {de ? `${release.free_from.slice(0, 4)} kostenlos nutzen` : `Use free in ${release.free_from.slice(0, 4)}`}
                 </Link>
               </div>
             ))}
           </div>
         </section>
+        {support.enabled && (
+          <section className="market-container l-section narrow" id="unterstuetzen">
+            <SupportCard support={support} de={de} />
+          </section>
+        )}
         <section className="l-section" id="warteliste">
           <div className="market-container wl-wrap">
             <div className="wl-intro">
-              <span className="eyebrow">{de ? 'Frühzugang' : 'Early access'}</span>
-              <h2>{de ? 'Seien Sie von Anfang an dabei.' : 'Be there from day one.'}</h2>
+              <span className="eyebrow">{de ? 'Voranmeldung' : 'Pre-registration'}</span>
+              <h2>{de ? 'Jetzt kostenlos voranmelden.' : 'Pre-register for free.'}</h2>
               <p>
                 {de
-                  ? 'Slotdove startet bald. Tragen Sie sich ein – wir melden uns persönlich und schalten Ihnen auf Wunsch Ihren Wunschtarif 14 Tage kostenlos frei.'
-                  : 'Slotdove launches soon. Join the list – we will contact you personally and, if you like, unlock your preferred plan free for 14 days.'}
+                  ? `Slotdove startet am ${from} – und ist bis ${until} komplett kostenlos. Melden Sie sich vor: Wir prüfen jede Anmeldung persönlich und schicken Ihnen nach der Bestätigung einen persönlichen Registrierungslink.`
+                  : `Slotdove launches on ${from} and is completely free until ${until}. Pre-register: we review every request personally and send you a personal sign-up link once approved.`}
               </p>
               <ul className="wl-points">
                 <li>
@@ -273,7 +302,7 @@ export async function Landing() {
                   <Check size={16} /> {de ? 'Ihre Wünsche fließen in die Entwicklung ein' : 'Your wishes shape the product'}
                 </li>
                 <li>
-                  <Check size={16} /> {de ? 'Keine Kreditkarte, keine automatische Verlängerung' : 'No credit card, no auto-renewal'}
+                  <Check size={16} /> {de ? 'Kein Abo, keine Kreditkarte, keine automatische Verlängerung' : 'No subscription, no card, no auto-renewal'}
                 </li>
               </ul>
             </div>
@@ -306,7 +335,7 @@ export async function Landing() {
             <h2>{de ? 'Bereit für weniger Telefon und mehr Zeit?' : 'Ready for fewer calls and more time?'}</h2>
             <p>{de ? 'Leg jetzt los – in 2 Minuten ist deine Buchungsseite online.' : 'Start now – your booking page is online in 2 minutes.'}</p>
             <Link className="btn btn-light btn-lg" href="#warteliste">
-              {de ? 'Frühzugang sichern' : 'Get early access'} <ArrowRight size={16} />
+              {de ? 'Kostenlos voranmelden' : 'Pre-register for free'} <ArrowRight size={16} />
             </Link>
           </div>
         </section>

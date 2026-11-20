@@ -56,14 +56,14 @@ export function WaitlistForm() {
     return (
       <div className="wl-done">
         <CheckCircle2 size={40} />
-        <h3>{de ? 'Danke! Sie stehen auf der Warteliste.' : 'Thanks! You are on the waitlist.'}</h3>
-        <p>{de ? 'Wir melden uns persönlich bei Ihnen – in der Regel innerhalb von 1–2 Werktagen.' : 'We will contact you personally – usually within 1–2 business days.'}</p>
+        <h3>{de ? 'Danke! Ihre Voranmeldung ist eingegangen.' : 'Thanks! Your pre-registration is in.'}</h3>
+        <p>{de ? 'Wir prüfen Ihre Anmeldung persönlich und schicken Ihnen nach der Bestätigung einen persönlichen Link zur Registrierung – in der Regel innerhalb von 1–2 Werktagen.' : 'We review it personally and send you a personal sign-up link after approval – usually within 1–2 business days.'}</p>
       </div>
     );
   const plans: [Plan, string][] = [
-    ['free', 'Starter · 5 €'],
-    ['pro', 'Pro · 15 €'],
-    ['business', 'Business · 25 €'],
+    ['free', 'Starter · ca. 5 €'],
+    ['pro', 'Pro · ca. 15 €'],
+    ['business', 'Business · ca. 25 €'],
     ['unsure', de ? 'Noch unsicher' : 'Not sure yet'],
   ];
   return (
@@ -72,8 +72,8 @@ export function WaitlistForm() {
         <legend>{de ? 'Was möchten Sie?' : 'What would you like?'}</legend>
         {(
           [
-            ['demo', de ? '14 Tage kostenlos testen' : '14-day free trial'],
-            ['subscription', de ? 'Abo nach dem Start' : 'Subscribe after launch'],
+            ['demo', de ? 'Kostenlos nutzen (Voranmeldung)' : 'Use it for free (pre-register)'],
+            ['subscription', de ? 'Später evtl. Tarif' : 'Maybe a plan later'],
             ['info', de ? 'Erst mal informiert bleiben' : 'Just keep me informed'],
           ] as const
         ).map(([v, label]) => (
@@ -127,7 +127,7 @@ export function WaitlistForm() {
           </select>
         </div>
         <div className="field full">
-          <span className="field-label">{de ? 'Interessanter Tarif' : 'Plan of interest'}</span>
+          <span className="field-label">{de ? 'Welcher Tarif käme später infrage? (unverbindlich)' : 'Which plan might suit you later? (non-binding)'}</span>
           <div className="row wrap">
             {plans.map(([v, label]) => (
               <button type="button" key={v} className={`chip ${plan === v ? 'on' : ''}`} onClick={() => setPlan(v)} aria-pressed={plan === v}>
@@ -164,7 +164,7 @@ export function WaitlistForm() {
       )}
       <button className="btn btn-primary btn-lg wl-submit" disabled={busy}>
         {busy ? <span className="spinner" /> : <ArrowRight size={16} />}
-        {de ? 'Auf die Warteliste' : 'Join the waitlist'}
+        {de ? 'Kostenlos voranmelden' : 'Pre-register for free'}
       </button>
     </form>
   );
