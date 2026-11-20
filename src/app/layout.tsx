@@ -1,3 +1,4 @@
+import { MaintenanceBanner } from '@/components/maintenance-banner';
 import '@fontsource-variable/inter';
 import type { Metadata } from 'next';
 import './globals.css';
@@ -18,6 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} suppressHydrationWarning>
       <body>
+        <MaintenanceBanner />
         <Providers locale={locale} messages={await getMessages()}>
           {children}
         </Providers>

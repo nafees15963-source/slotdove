@@ -36,8 +36,13 @@ import {
   UserCog,
   Users,
   X,
+  BarChart3,
+  FileLock2,
+  Power,
+  ShieldAlert,
 } from 'lucide-react';
 import { Brand } from './brand';
+import { BlocklistDesk, CreateUserButton, DsrDesk, GlobalSearch, PlatformDesk, ReportsDesk, StatsDesk, UserSecurity } from './admin-trust';
 import { Preferences } from './preferences';
 import { Button } from './ui/button';
 import { Dialog } from './ui/dialog';
@@ -93,7 +98,7 @@ type AdminData = {
   tickets: AdminTicket[];
 };
 type AdminTicket = { id: string; case_number: string; business_id: string | null; user_id: string | null; contact_email: string; subject: string; category: string; priority: string; status: TicketStatus; assigned_to: string | null; last_reply_by: string; created_at: string; updated_at: string };
-type Tab = 'overview' | 'support' | 'waitlist' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
+type Tab = 'overview' | 'search' | 'support' | 'reports' | 'gdpr' | 'blocklist' | 'stats' | 'platform' | 'waitlist' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
 const bannedNow = (until: string | null | undefined) => !!until && Date.parse(until) > Date.now();
 const inPast = (date: string | null | undefined) => !!date && Date.parse(date) <= Date.now();
 const fmt = (iso: string | null | undefined, locale: string) =>
@@ -143,6 +148,8 @@ function AdminConsole() {
       setData(await api<AdminData>('/api/admin'));
       setError('');
     } catch (e) {
+      // Session lost its second factor (e.g. new device): show the 2FA screen again.
+      if (e instanceof Error && e.message === 'MFA_REQUIRED') return location.reload();
       setError(friendlyError(e, locale));
     }
   }, [locale]);
@@ -171,10 +178,16 @@ function AdminConsole() {
   const openReports = data?.reports.filter((r) => r.status === 'open') || [];
   const nav: [Tab, typeof LayoutDashboard, string, number?][] = [
     ['overview', LayoutDashboard, de ? 'Übersicht' : 'Overview'],
+    ['search', Search, de ? 'Globale Suche' : 'Global search'],
+    ['stats', BarChart3, de ? 'Statistik' : 'Statistics'],
     ['support', LifeBuoy, de ? 'Support-Panel' : 'Support desk', data?.tickets.filter((t) => !['resolved', 'closed'].includes(t.status) && t.last_reply_by === 'user').length || undefined],
     ['businesses', Building2, de ? 'Unternehmen' : 'Businesses', data?.businesses.length],
     ['users', Users, de ? 'Benutzer' : 'Users', data?.risks.filter((r) => r.score >= 0.5).length || undefined],
     ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined],
+    ['reports', Flag, de ? 'Meldungen (DSA)' : 'Reports (DSA)'],
+    ['gdpr', FileLock2, de ? 'DSGVO-Anfragen' : 'GDPR requests'],
+    ['blocklist', ShieldAlert, de ? 'Sperrliste' : 'Blocklist'],
+    ['platform', Power, de ? 'Plattform-Schalter' : 'Platform switches'],
     ['waitlist', ListChecks, de ? 'Warteliste' : 'Waitlist', data?.waitlistNew || undefined],
     ['features', FlaskConical, de ? 'Beta & Funktionen' : 'Beta & features'],
     ['email', Mail, de ? 'System & E-Mail' : 'System & email'],
@@ -326,7 +339,20 @@ function AdminConsole() {
           </>
         )}
         {data && tab === 'businesses' && <BusinessTable data={data} emailOf={emailOf} onOpen={setBusiness} />}
-        {data && tab === 'users' && <UserTable data={data} onOpen={setUser} />}
+        {data && tab === 'users' && (
+          <>
+            <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
+              <CreateUserButton onDone={() => void load()} />
+            </div>
+            <UserTable data={data} onOpen={setUser} />
+          </>
+        )}
+        {tab === 'search' && <GlobalSearch onBusiness={setBusiness} onUser={setUser} />}
+        {tab === 'stats' && <StatsDesk />}
+        {tab === 'reports' && <ReportsDesk nameOf={nameOf} />}
+        {tab === 'gdpr' && <DsrDesk />}
+        {tab === 'blocklist' && <BlocklistDesk />}
+        {tab === 'platform' && <PlatformDesk />}
         {data && tab === 'moderation' && <Moderation data={data} action={action} nameOf={nameOf} />}
         {data && tab === 'features' && <Features data={data} action={action} />}
         {data && tab === 'announcements' && <Announcements data={data} action={action} nameOf={nameOf} />}
@@ -335,6 +361,9 @@ function AdminConsole() {
             <section className="panel">
               <div className="panel-head">
                 <h2 className="panel-title">{de ? 'Verwaltungsprotokoll' : 'Admin audit log'}</h2>
+                <a className="btn btn-outline btn-sm" href={`/api/admin/trust?view=audit-csv`}>
+                  CSV
+                </a>
               </div>
               <div className="panel-body feed">
                 {data.audit.map((a) => (
@@ -1134,6 +1163,7 @@ function UserDrawer({ id, data, onClose, action, nameOf, onBusiness }: { id: str
               </div>
             </div>
             {risk && <div className="notice notice-warn">{risk.reasons.map((x) => riskLabels[x.split(':')[0]]).join(' · ')}</div>}
+            <UserSecurity id={id} onChanged={() => void load()} />
             <div className="row wrap">
               {banned ? (
                 <Button variant="outline" onClick={async () => (await action({ action: 'ban', user_id: id, hours: 0 }, de ? 'Entsperrt' : 'Unbanned'), load())}>

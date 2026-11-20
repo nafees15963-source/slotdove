@@ -9,9 +9,12 @@ export default async function Page({ params }: { params: Promise<{ info: string 
   if (info === 'de' || info === 'en') return <Landing />;
   if (info === 'pricing') redirect('/#pricing');
   if (info === 'faq') redirect('/#faq');
+  if (info === 'privacy') redirect('/datenschutz');
+  if (info === 'terms') redirect('/agb');
+  if (info === 'legal') redirect('/impressum');
   const locale = await getLocale(),
     t = await getMessages();
-  if (!['about', 'contact', 'privacy', 'terms', 'legal'].includes(info)) notFound();
+  if (!['about', 'contact'].includes(info)) notFound();
   const c = infoContent[locale][info as keyof typeof infoContent.en];
   return (
     <>

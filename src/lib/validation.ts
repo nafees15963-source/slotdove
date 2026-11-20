@@ -39,6 +39,10 @@ export const serviceSchema = z.object({
     .string()
     .regex(/^#[a-fA-F0-9]{6}$/)
     .default('#0d7f79'),
+  art: z
+    .string()
+    .regex(/^[a-z0-9-]{0,40}$/)
+    .default(''),
   active: z.boolean().default(true),
 });
 export const customerSchema = z.object({
@@ -49,6 +53,7 @@ export const customerSchema = z.object({
     .transform((v) => (v ? v.toLowerCase() : null)),
   phone: line(0, 30).default(''),
   notes: text(2000).default(''),
+  booking_blocked: z.boolean().optional(),
 });
 export const bookingSchema = z.object({
   business_id: z.uuid(),

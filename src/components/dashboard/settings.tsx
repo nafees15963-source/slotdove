@@ -1,4 +1,5 @@
 'use client';
+import { AccountPrivacy } from './trust-dialogs';
 import { InfoTip } from '../tutorial';
 import type { Visual } from '@/lib/tutorials';
 import { industries, industryById } from '@/lib/industries';
@@ -262,6 +263,7 @@ export function Settings({ bookingOnly = false }: { bookingOnly?: boolean }) {
                       {t.privacyExport}
                     </a>
                   </Button>
+                  <AccountPrivacy />
                   <p style={{ fontSize: 11 }}>{t.deleteCustomerHelp}</p>
                 </div>
               </div>

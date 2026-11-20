@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { Admin } from '@/components/admin';
+import { AdminMfa } from '@/components/admin-mfa';
+import { adminAssurance, adminMfaRequired } from '@/lib/http';
 export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Platform administration',
@@ -24,5 +26,9 @@ export default async function Page() {
         </Link>
       </main>
     );
+  if (adminMfaRequired()) {
+    const mfa = await adminAssurance(db);
+    if (mfa.current !== 'aal2') return <AdminMfa enrolled={mfa.enrolled} />;
+  }
   return <Admin />;
 }

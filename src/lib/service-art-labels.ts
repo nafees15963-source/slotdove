@@ -1,0 +1,22 @@
+/** Labels for the service picture motifs (key → [en, de]). */
+export const artLabels: Record<string, [string, string]> = {
+  scissors: ['Hair & barber', 'Haare & Barber'],
+  palette: ['Colour', 'Farbe & Strähnen'],
+  hand: ['Nails', 'Nägel'],
+  sparkles: ['Beauty & cosmetics', 'Kosmetik & Beauty'],
+  heart: ['Massage', 'Massage'],
+  flower: ['Wellness & yoga', 'Wellness & Yoga'],
+  activity: ['Physio & therapy', 'Physio & Therapie'],
+  dumbbell: ['Training', 'Training & Fitness'],
+  stethoscope: ['Medical', 'Praxis & Medizin'],
+  smile: ['Dental', 'Zahn'],
+  dog: ['Pets', 'Tiere'],
+  car: ['Car & driving', 'Auto & Fahrt'],
+  camera: ['Photo', 'Foto'],
+  pen: ['Tattoo & piercing', 'Tattoo & Piercing'],
+  book: ['Lessons', 'Kurse & Nachhilfe'],
+  chat: ['Consulting', 'Beratung'],
+  home: ['Home services', 'Haus & Reinigung'],
+  brush: ['Creative', 'Kreativ & Maler'],
+  calendar: ['General appointment', 'Allgemeiner Termin'],
+};

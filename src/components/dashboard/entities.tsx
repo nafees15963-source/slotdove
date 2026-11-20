@@ -3,19 +3,21 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Clock3,
-  Scissors,
   Search,
   Download,
   MoreHorizontal,
   ArrowUpRight,
   UserPlus,
   Trash2,
+  KeyRound,
+  Flag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from './shell';
 import { useI18n } from '../providers';
 import { Heading, AddButton, Empty } from './common';
 import { TeamAccess } from './team-access';
+import { ServiceImage, StaffAccountDialog, ReportDialog } from './trust-dialogs';
 import { EntityForm } from './forms';
 import { Button } from '../ui/button';
 import { Dialog } from '../ui/dialog';
@@ -31,6 +33,8 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
     [open, setOpen] = useState(false),
     [invite, setInvite] = useState(false),
     [inviteStaff, setInviteStaff] = useState<string | undefined>(),
+    [account, setAccount] = useState<{ staffId?: string } | null>(null),
+    [report, setReport] = useState<{ customer_id?: string; name: string } | null>(null),
     [assign, setAssign] = useState<Service | null>(null),
     [history, setHistory] = useState<Customer | null>(null),
     [customers, setCustomers] = useState<Customer[]>(w.customers),
@@ -137,6 +141,12 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
                 {t.invitation}
               </Button>
             )}
+            {kind === 'staff' && ['owner', 'admin'].includes(w.role) && (
+              <Button variant="outline" onClick={() => setAccount({})}>
+                <KeyRound size={14} />
+                {locale === 'de' ? 'Zugang erstellen' : 'Create login'}
+              </Button>
+            )}
             <AddButton onClick={create}>
               {kind === 'services'
                 ? t.newService
@@ -173,9 +183,7 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
           {(filtered as Service[]).map((s) => (
             <div className="panel service-card" key={s.id}>
               <div className="spread">
-                <div className="service-icon" style={{ color: s.color }}>
-                  <Scissors size={21} strokeWidth={1.5} />
-                </div>
+                <ServiceImage service={s} />
                 <span className={`badge ${s.active ? 'badge-green' : ''}`}>
                   {s.active ? t.active : t.archive}
                 </span>
@@ -255,6 +263,12 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
                     {t.invitation}
                   </Button>
                 )}
+                {!s.user_id && s.active && ['owner', 'admin'].includes(w.role) && (
+                  <Button variant="outline" size="sm" onClick={() => setAccount({ staffId: s.id })}>
+                    <KeyRound size={13} />
+                    {locale === 'de' ? 'Zugang' : 'Login'}
+                  </Button>
+                )}
                 {
                   <Button
                     variant="ghost"
@@ -288,6 +302,7 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
                     <div className="row">
                       <span className="avatar">{c.name.slice(0, 2).toUpperCase()}</span>
                       {c.name}
+                      {c.booking_blocked && <span className="badge badge-red">{locale === 'de' ? 'gesperrt' : 'blocked'}</span>}
                     </div>
                   </td>
                   <td>{c.email}</td>
@@ -307,6 +322,15 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
                         aria-label={t.edit}
                       >
                         <MoreHorizontal size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setReport({ customer_id: c.id, name: c.name })}
+                        aria-label={locale === 'de' ? 'Kunde melden' : 'Report customer'}
+                        title={locale === 'de' ? 'Kunde melden / sperren' : 'Report / block customer'}
+                      >
+                        <Flag size={13} />
                       </Button>
                       <Button
                         variant="ghost"
@@ -331,7 +355,9 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
           )}
         </div>
       )}
-      {kind === 'staff' && <TeamAccess refreshKey={invite} />}
+      {kind === 'staff' && <TeamAccess refreshKey={invite || !!account} />}
+      {account && <StaffAccountDialog open staffId={account.staffId} onClose={() => setAccount(null)} />}
+      <ReportDialog target={report} onClose={() => setReport(null)} />
       {open && (
         <EntityForm
           kind={kind === 'services' ? 'service' : kind === 'staff' ? 'staff' : 'customer'}
@@ -403,6 +429,34 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
         {history && (
           <div className="stack">
             <p>{history.notes || t.internalNotes + ': —'}</p>
+            {history.booking_blocked && (
+              <div className="notice notice-warn">
+                {locale === 'de' ? 'Dieser Kunde kann aktuell nicht online buchen.' : 'This customer cannot book online.'}{' '}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await api(`/api/businesses/${w.business.id}/customers`, 'POST', {
+                        id: history.id,
+                        name: history.name,
+                        email: history.email || '',
+                        phone: history.phone,
+                        notes: history.notes,
+                        booking_blocked: false,
+                      });
+                      setCustomers((list) => list.map((c) => (c.id === history.id ? { ...c, booking_blocked: false } : c)));
+                      setHistory({ ...history, booking_blocked: false });
+                      toast.success(t.saved);
+                    } catch (e) {
+                      toast.error(friendlyError(e, locale));
+                    }
+                  }}
+                >
+                  {locale === 'de' ? 'Entsperren' : 'Unblock'}
+                </Button>
+              </div>
+            )}
             <div className="row wrap">
               <Button variant="outline" size="sm" asChild>
                 <a href={`/api/businesses/${w.business.id}/customer-export?item=${history.id}`}>

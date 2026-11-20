@@ -83,10 +83,17 @@ export async function requireBusiness(id: string, manager = true) {
     throw new HttpError(403, 'FORBIDDEN');
   return { db, user, role: role as 'owner' | 'admin' | 'staff' };
 }
+/** Admins must confirm a second factor (TOTP) unless ADMIN_MFA=off is set as an emergency switch. */
+export const adminMfaRequired = () => process.env.ADMIN_MFA !== 'off';
+export async function adminAssurance(db: Awaited<ReturnType<typeof supabaseServer>>) {
+  const { data } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
+  return { current: data?.currentLevel || 'aal1', enrolled: data?.nextLevel === 'aal2' };
+}
 export async function requireAdmin() {
   const { db, user } = await requireUser();
   const { data, error } = await db.rpc('my_platform_role');
   if (error || !data) throw new HttpError(403, 'FORBIDDEN');
+  if (adminMfaRequired() && (await adminAssurance(db)).current !== 'aal2') throw new HttpError(403, 'MFA_REQUIRED');
   return { db, user };
 }
 export function newToken() {

@@ -32,7 +32,7 @@ export async function GET(request: Request, context: { params: Promise<{ slug: s
       ] = await Promise.all([
         db
           .from('services')
-          .select('id,name,description,duration_minutes,price_cents,color')
+          .select('id,name,description,duration_minutes,price_cents,color,art,image_path')
           .eq('business_id', b.id)
           .eq('active', true)
           .order('sort_order'),

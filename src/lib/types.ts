@@ -36,6 +36,8 @@ export type Service = {
   buffer_before: number;
   buffer_after: number;
   color: string;
+  art?: string;
+  image_path?: string | null;
   active: boolean;
 };
 export type Staff = {
@@ -52,6 +54,7 @@ export type Customer = {
   email: string | null;
   phone: string;
   notes: string;
+  booking_blocked?: boolean;
   created_at: string;
 };
 export type Booking = {

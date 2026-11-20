@@ -13,6 +13,7 @@ import { dateLabel } from '@/lib/utils';
 import type { Booking, Customer, Service, Staff } from '@/lib/types';
 import { Status } from './common';
 import { InfoTip } from '../tutorial';
+import { artLabels } from '@/lib/service-art-labels';
 export type FormKind = 'service' | 'customer' | 'staff' | 'booking' | 'hours' | 'block' | 'invite';
 export function EntityForm({
   kind,
@@ -213,6 +214,17 @@ export function EntityForm({
                   100000,
                 )}
                 {input('color', t.color, 'color', init?.color ?? '#0d7f79')}
+                <div className="field">
+                  <label htmlFor="f-art">{locale === 'de' ? 'Bild' : 'Picture'}</label>
+                  <select id="f-art" name="art" defaultValue={init?.art || ''}>
+                    <option value="">{locale === 'de' ? 'Automatisch (KI erkennt die Leistung)' : 'Automatic (AI recognises the service)'}</option>
+                    {Object.keys(artLabels).map((k) => (
+                      <option key={k} value={k}>
+                        {artLabels[k][locale === 'de' ? 1 : 0]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {input('buffer_before', t.before, 'number', init?.buffer_before ?? 0, true, 0, 120)}
                 {input('buffer_after', t.after, 'number', init?.buffer_after ?? 0, true, 0, 120)}
                 <div className="field full">
@@ -238,6 +250,7 @@ export function EntityForm({
                               price: `${(form.elements.namedItem('price') as HTMLInputElement).value} ${w.business.currency}`,
                             });
                             (form.elements.namedItem('description') as HTMLTextAreaElement).value = r.text;
+                            toast.message(locale === 'de' ? 'KI-Vorschlag eingefügt – bitte prüfen und anpassen.' : 'AI suggestion inserted – please review.');
                           } catch (err) {
                             toast.error(locale === 'de' ? 'Die KI ist gerade nicht erreichbar.' : 'AI is unavailable right now.');
                             console.warn(err);

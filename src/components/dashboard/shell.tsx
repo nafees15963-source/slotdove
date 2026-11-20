@@ -99,12 +99,14 @@ export function DashboardShell(props: {
   businesses: Business[];
   user: { id: string; email: string };
   isAdmin: boolean;
+  tutorialsOff?: boolean;
+  mustChangePassword?: boolean;
   children: React.ReactNode;
 }) {
   const section = usePathname().split('/')[2] || 'overview';
   return (
     <WorkspaceContext.Provider value={props.workspace}>
-      <TutorialProvider page={section}>
+      <TutorialProvider page={section} disabled={props.tutorialsOff}>
         <ShellInner {...props} section={section} />
       </TutorialProvider>
     </WorkspaceContext.Provider>

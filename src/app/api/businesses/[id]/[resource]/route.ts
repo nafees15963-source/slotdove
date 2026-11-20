@@ -18,7 +18,9 @@ import {
   sameOrigin,
   newToken,
   hashToken,
+  softRateLimit,
 } from '@/lib/http';
+import { generatePassword, isBlocked } from '@/lib/trust';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { csv } from '@/lib/utils';
 import { calendarFile } from '@/lib/scheduling/engine';
@@ -286,6 +288,60 @@ export async function POST(request: Request, context: Context) {
         .single();
       if (error) throw error;
       return json(data);
+    }
+    if (resource === 'staff-account') {
+      // Owner/admin creates a login for an employee directly (no e-mail round trip).
+      // The account must change the generated password at first login.
+      const v = z
+        .object({
+          email: z.email().max(254).transform((e) => e.trim().toLowerCase()),
+          name: line(2, 100),
+          role: z.enum(['admin', 'staff']).default('staff'),
+          staff_id: z.uuid().optional(),
+        })
+        .parse(input);
+      if (v.role === 'admin' && role !== 'owner') throw new HttpError(403, 'FORBIDDEN');
+      await softRateLimit(request, `staff-account:${id}`, 10);
+      if (await isBlocked({ email: v.email })) throw new HttpError(403, 'BLOCKED');
+      const admin = supabaseAdmin();
+      const password = generatePassword();
+      const created = await admin.auth.admin.createUser({
+        email: v.email,
+        password,
+        email_confirm: true,
+        user_metadata: { display_name: v.name },
+        app_metadata: { must_change_password: true, created_by_business: id },
+      });
+      if (created.error || !created.data.user) {
+        if (/registered|exists/i.test(created.error?.message || '')) throw new HttpError(409, 'ACCOUNT_EXISTS');
+        throw created.error || new HttpError(500, 'INTERNAL_ERROR');
+      }
+      const newUser = created.data.user;
+      try {
+        await admin.from('profiles').upsert({ id: newUser.id, name: v.name, locale: 'de' });
+        const { error: me } = await admin.from('business_members').insert({ business_id: id, user_id: newUser.id, role: v.role });
+        if (me) throw me;
+        if (v.staff_id) {
+          const { data: linked, error: le } = await admin
+            .from('staff_profiles')
+            .update({ user_id: newUser.id })
+            .eq('id', v.staff_id)
+            .eq('business_id', id)
+            .is('user_id', null)
+            .select('id');
+          if (le) throw le;
+          if (!linked?.length) throw new HttpError(409, 'STAFF_ALREADY_LINKED');
+        } else if (v.role === 'staff') {
+          const { error: se } = await admin.from('staff_profiles').insert({ business_id: id, user_id: newUser.id, name: v.name });
+          if (se) throw se;
+        }
+      } catch (e) {
+        await admin.auth.admin.deleteUser(newUser.id);
+        throw e;
+      }
+      await admin.from('admin_audit_logs').insert({ actor_id: user.id, business_id: id, action: 'staff.account_created', details: { user_id: newUser.id, role: v.role } });
+      // The password is shown exactly once to the creator and never stored in plain text.
+      return json({ user_id: newUser.id, email: v.email, password }, 201);
     }
     if (resource === 'invitations') {
       const fields = z

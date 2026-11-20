@@ -7,33 +7,33 @@ import { tutorials, type Visual } from '@/lib/tutorials';
 type Ctx = { start: (id: string) => void; active: string | null };
 const TutorialContext = createContext<Ctx>({ start: () => {}, active: null });
 export const useTutorial = () => useContext(TutorialContext);
-const seenKey = (id: string) => `slotdove-tour-${id}`;
-function seen(id: string) {
+const OFF_KEY = 'slotdove-tours-off';
+function toursOff() {
   try {
-    return localStorage.getItem(seenKey(id)) === '1';
+    return localStorage.getItem(OFF_KEY) === '1' || localStorage.getItem('slotdove-tour-overview') === '1';
   } catch {
     return true;
   }
 }
-function markSeen(id: string) {
+/** Closing a tutorial (X, Escape or "OK") switches automatic tutorials off for good,
+ * on this device and in the user profile. The "Anleitung" button still opens them. */
+function switchOff() {
   try {
-    localStorage.setItem(seenKey(id), '1');
+    localStorage.setItem(OFF_KEY, '1');
   } catch {
     /* private mode */
   }
+  void fetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tutorials_off: true }) }).catch(() => null);
 }
-/** Provides tutorials for every page. `autoStart` opens the page guide on the first visit. */
-export function TutorialProvider({ children, page, autoStart = true }: { children: ReactNode; page: string; autoStart?: boolean }) {
+/** Provides tutorials for every page. Only the welcome tour starts on its own, once. */
+export function TutorialProvider({ children, page, autoStart = true, disabled = false }: { children: ReactNode; page: string; autoStart?: boolean; disabled?: boolean }) {
   const [active, setActive] = useState<string | null>(null);
   const start = useCallback((id: string) => setActive(tutorials[id] ? id : 'overview'), []);
   useEffect(() => {
-    if (!autoStart || !tutorials[page]) return;
-    // First visit of the app always begins with the welcome tour.
-    const first = !seen('overview') ? 'overview' : !seen(page) ? page : null;
-    if (!first) return;
-    const timer = setTimeout(() => setActive(first), 700);
+    if (!autoStart || disabled || page !== 'overview' || toursOff()) return;
+    const timer = setTimeout(() => setActive('overview'), 700);
     return () => clearTimeout(timer);
-  }, [page, autoStart]);
+  }, [page, autoStart, disabled]);
   return (
     <TutorialContext.Provider value={{ start, active }}>
       {children}
@@ -41,7 +41,7 @@ export function TutorialProvider({ children, page, autoStart = true }: { childre
         <TutorialPlayer
           id={active}
           onClose={() => {
-            markSeen(active);
+            switchOff();
             setActive(null);
           }}
         />
@@ -62,17 +62,29 @@ function TutorialPlayer({ id, onClose }: { id: string; onClose: () => void }) {
       setRect(null);
       return;
     }
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    const update = () => setRect(el.getBoundingClientRect());
-    const timer = setTimeout(update, 350);
+    // Jump (no smooth scroll) so the highlight never slides while measuring.
+    el.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setRect(el.getBoundingClientRect()));
+    };
+    update();
     window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true);
     return () => {
-      clearTimeout(timer);
+      cancelAnimationFrame(frame);
       window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, true);
     };
   }, [current]);
+  useEffect(() => {
+    // The page must not scroll underneath an open tutorial.
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prev;
+    };
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -83,14 +95,8 @@ function TutorialPlayer({ id, onClose }: { id: string; onClose: () => void }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose, tut.steps.length]);
   const last = step === tut.steps.length - 1;
-  const cardStyle: React.CSSProperties | undefined =
-    rect && typeof window !== 'undefined' && window.innerWidth > 760
-      ? {
-          position: 'fixed',
-          left: Math.min(Math.max(16, rect.left), window.innerWidth - 436),
-          top: rect.bottom + 16 + 330 < window.innerHeight ? rect.bottom + 16 : Math.max(16, rect.top - 346),
-        }
-      : undefined;
+  // The card stays in one fixed place; only the spotlight moves to the highlighted element.
+  const dock = rect && typeof window !== 'undefined' ? (rect.top + rect.height / 2 > window.innerHeight / 2 ? 'top' : 'bottom') : 'center';
   return (
     <div className="tour-layer" role="dialog" aria-modal="true" aria-label={tut.title[i]}>
       {rect ? (
@@ -101,7 +107,7 @@ function TutorialPlayer({ id, onClose }: { id: string; onClose: () => void }) {
       ) : (
         <div className="tour-backdrop" onClick={onClose} />
       )}
-      <div className={`tour-card ${cardStyle ? 'anchored' : ''}`} style={cardStyle} key={step}>
+      <div className={`tour-card dock-${dock}`} key={step}>
         <button className="tour-close" onClick={onClose} aria-label={locale === 'de' ? 'Tutorial schließen' : 'Close tutorial'}>
           <X size={16} />
         </button>

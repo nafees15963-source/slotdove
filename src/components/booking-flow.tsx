@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ServiceArt } from '@/lib/service-art';
 import { ArrowLeft, ArrowRight, Check, Clock3, Copy, Globe2, MapPin, ShieldCheck, Download, Mail, Phone, Sun, Sunset, Moon, User } from 'lucide-react';
 import { formatInTimeZone } from 'date-fns-tz';
 import { toast } from 'sonner';
@@ -36,6 +37,9 @@ type PublicService = {
   description: string;
   duration_minutes: number;
   price_cents: number;
+  color?: string;
+  art?: string;
+  image_path?: string | null;
 };
 type Catalog = {
   business: PublicBusiness;
@@ -323,7 +327,7 @@ export function BookingFlow({ slug }: { slug: string }) {
                             setStep(1);
                           }}
                         >
-                          <span className="bk-dot" style={{ background: (sv as PublicService & { color?: string }).color || accent }} />
+                          <ServiceArt service={{ ...sv, color: sv.color || accent }} size={46} />
                           <span className="grow">
                             <strong>{sv.name}</strong>
                             {sv.description && <small>{sv.description}</small>}
@@ -435,7 +439,7 @@ export function BookingFlow({ slug }: { slug: string }) {
                     <label className="check-label full">
                       <input type="checkbox" checked={details.consent} onChange={(e) => setDetails((d) => ({ ...d, consent: e.target.checked }))} required />
                       <span>
-                        {t.consent} <Link href="/privacy" target="_blank">{t.privacy}</Link>
+                        {t.consent} <Link href="/datenschutz" target="_blank">{t.privacy}</Link>
                       </span>
                     </label>
                   </div>
@@ -519,7 +523,7 @@ export function BookingFlow({ slug }: { slug: string }) {
             )}
           </div>
           <footer className="bk-foot">
-            Powered by <Link href="/">Slotdove</Link> · <Link href="/privacy">{t.privacy}</Link>
+            Powered by <Link href="/">Slotdove</Link> · <Link href="/datenschutz">{t.privacy}</Link>
           </footer>
         </main>
       )}

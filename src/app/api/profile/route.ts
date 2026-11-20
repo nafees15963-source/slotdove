@@ -29,3 +29,17 @@ export async function POST(request: Request) {
     return failure(e);
   }
 }
+
+/** Small preference updates (currently: automatic tutorials on/off). */
+export async function PATCH(request: Request) {
+  try {
+    sameOrigin(request);
+    const { db, user } = await requireUser();
+    const fields = z.object({ tutorials_off: z.boolean() }).parse(await body(request));
+    const { error } = await db.from('profiles').upsert({ id: user.id, ...fields });
+    if (error) throw error;
+    return json({ ok: true });
+  } catch (e) {
+    return failure(e);
+  }
+}

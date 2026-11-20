@@ -162,6 +162,14 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
             <Send size={16} />
           </button>
         </form>
+        <p className="ai-disclosure">
+          {de
+            ? 'Du sprichst mit einem KI-System. Antworten können Fehler enthalten – bitte wichtige Angaben prüfen. Keine Gesundheitsdaten eingeben.'
+            : 'You are talking to an AI system. Answers may contain mistakes – please verify. Do not enter health data.'}{' '}
+          <a href="/datenschutz#ki" target="_blank">
+            {de ? 'Mehr' : 'More'}
+          </a>
+        </p>
       </aside>
     </div>
   );

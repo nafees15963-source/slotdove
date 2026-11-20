@@ -1,0 +1,6 @@
+# Sicherheitslücke gefunden? Bitte verantwortungsvoll melden.
+Contact: https://slotdove.vercel.app/melden
+Expires: 2027-11-20T00:00:00.000Z
+Preferred-Languages: de, en
+Policy: https://slotdove.vercel.app/melden
+Canonical: https://slotdove.vercel.app/.well-known/security.txt

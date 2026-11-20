@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { bookingSchema } from '@/lib/validation';
-import { body, failure, hashToken, json, rateLimit, sameOrigin } from '@/lib/http';
+import { body, failure, hashToken, HttpError, json, rateLimit, sameOrigin } from '@/lib/http';
+import { isBlocked, platformSetting } from '@/lib/trust';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { logActivity } from '@/lib/activity';
 import { notifyOwner, sendSoon } from '@/lib/notifications';
@@ -14,6 +15,17 @@ export async function POST(request: Request) {
         .regex(/^[a-zA-Z0-9_-]{43}$/)
         .parse(raw.management_token);
     await rateLimit(request, `booking:${input.business_id}`, 8);
+    if (!(await platformSetting('public_booking')).enabled) throw new HttpError(503, 'BOOKING_PAUSED');
+    if (await isBlocked({ email: input.email, request })) throw new HttpError(403, 'BLOCKED');
+    const { data: blocked } = await supabaseAdmin()
+      .from('customers')
+      .select('id')
+      .eq('business_id', input.business_id)
+      .eq('email', input.email.toLowerCase())
+      .eq('booking_blocked', true)
+      .maybeSingle();
+    // Same answer as a taken slot would not be honest; a neutral message protects the business.
+    if (blocked) throw new HttpError(403, 'BOOKING_NOT_ALLOWED');
     const { data, error } = await supabaseAdmin().rpc('reserve_booking', {
       p_business: input.business_id,
       p_service: input.service_id,

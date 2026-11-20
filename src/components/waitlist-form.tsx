@@ -151,7 +151,7 @@ export function WaitlistForm() {
             {de
               ? 'Ich bin einverstanden, dass Slotdove mich per E-Mail oder Telefon zur Testphase, zum Start und zu Angeboten kontaktiert. Ich kann das jederzeit widerrufen.'
               : 'I agree that Slotdove may contact me by email or phone about the test phase, the launch and offers. I can withdraw at any time.'}{' '}
-            <a href="/privacy" target="_blank" className="purple">
+            <a href="/datenschutz" target="_blank" className="purple">
               {de ? 'Datenschutzhinweise' : 'Privacy notice'}
             </a>
           </span>

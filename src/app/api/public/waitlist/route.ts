@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createHmac } from 'node:crypto';
 import { after } from 'next/server';
+import { isBlocked } from '@/lib/trust';
 import { body, failure, HttpError, json, rateLimit, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { email, line, phone, text } from '@/lib/sanitize';
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
     const input = schema.parse(raw);
     if (Date.now() - input.started_at < 2500) throw new HttpError(400, 'TOO_FAST');
     await rateLimit(request, 'waitlist', 5);
+    if (await isBlocked({ email: input.email, request })) return json({ ok: true }); // silently drop blocked senders
     const secret = process.env.RATE_LIMIT_SECRET || process.env.SUPABASE_SECRET_KEY || '';
     const ip = request.headers.get('x-real-ip') || '';
     const db = supabaseAdmin();

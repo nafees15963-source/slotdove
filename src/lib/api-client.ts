@@ -21,6 +21,40 @@ export function friendlyError(error: unknown, locale: string) {
       'Cancel the appointment before permanently deleting it.',
       'Storniere den Termin, bevor du ihn endgültig löschst.',
     ],
+    ACCOUNT_EXISTS: [
+      'An account with this email already exists. Send an invitation instead.',
+      'Mit dieser E-Mail gibt es bereits ein Konto. Bitte sende stattdessen eine Einladung.',
+    ],
+    BLOCKED: [
+      'This action is not possible. Please contact support.',
+      'Diese Aktion ist nicht möglich. Bitte wende dich an den Support.',
+    ],
+    BOOKING_NOT_ALLOWED: [
+      'Online booking is not possible. Please contact the business directly.',
+      'Eine Online-Buchung ist nicht möglich. Bitte wende dich direkt an den Betrieb.',
+    ],
+    BOOKING_PAUSED: [
+      'Online booking is paused for maintenance. Please try again later.',
+      'Online-Buchungen sind wegen Wartung kurz pausiert. Bitte versuche es später erneut.',
+    ],
+    LEGAL_REQUIRED: [
+      'Please accept the terms and the data processing agreement.',
+      'Bitte akzeptiere die AGB und den Auftragsverarbeitungsvertrag.',
+    ],
+    ADMIN_CANNOT_SELF_DELETE: [
+      'Platform administrators cannot delete themselves here.',
+      'Plattform-Administratoren können sich hier nicht selbst löschen.',
+    ],
+    SIGNUPS_PAUSED: [
+      'New registrations are paused at the moment.',
+      'Neue Registrierungen sind gerade pausiert.',
+    ],
+    MFA_REQUIRED: [
+      'Please confirm with your authenticator app.',
+      'Bitte bestätige mit deiner Authenticator-App.',
+    ],
+    FILE_TOO_LARGE: ['The file is too large (max. 2 MB).', 'Die Datei ist zu groß (max. 2 MB).'],
+    INVALID_FILE: ['Please upload a PNG, JPG or WebP image.', 'Bitte lade ein PNG-, JPG- oder WebP-Bild hoch.'],
     STAFF_ALREADY_LINKED: [
       'This team profile is already connected to an account.',
       'Dieses Teamprofil ist bereits mit einem Konto verbunden.',

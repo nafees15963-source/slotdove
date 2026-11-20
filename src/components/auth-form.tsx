@@ -32,8 +32,12 @@ export function AuthForm({
         email: f.get('email') || undefined,
         password: f.get('password') || undefined,
         name: f.get('name') || undefined,
+        legal: mode === 'signup' ? f.get('legal') === 'on' : undefined,
       });
-      if (mode === 'login') {
+      if (mode === 'update' && new URLSearchParams(location.search).get('first')) {
+        router.push('/dashboard');
+        router.refresh();
+      } else if (mode === 'login') {
         router.push(admin ? '/admin' : '/dashboard');
         router.refresh();
       } else
@@ -194,6 +198,27 @@ export function AuthForm({
                   )}
                 </div>
               )}
+              {mode === 'signup' && (
+                <label className="check-label" style={{ marginTop: 14, fontSize: 12, lineHeight: 1.5 }}>
+                  <input type="checkbox" name="legal" required />
+                  <span>
+                    {locale === 'de' ? (
+                      <>
+                        Ich handle als Unternehmer (§ 14 BGB) und akzeptiere die <Link href="/agb" target="_blank">AGB</Link> sowie den{' '}
+                        <Link href="/avv" target="_blank">Auftragsverarbeitungsvertrag</Link>. Die <Link href="/datenschutz" target="_blank">Datenschutzerklärung</Link> habe ich zur Kenntnis genommen.
+                      </>
+                    ) : (
+                      <>
+                        I act as a business and accept the <Link href="/agb" target="_blank">terms</Link> and the <Link href="/avv" target="_blank">data processing agreement</Link>. I have read the{' '}
+                        <Link href="/datenschutz" target="_blank">privacy policy</Link>.
+                      </>
+                    )}
+                  </span>
+                </label>
+              )}
+              {mode === 'update' && (
+                <FirstLoginNotice locale={locale} />
+              )}
               {error && (
                 <p className="notice notice-error" role="alert" style={{ margin: '18px 0' }}>
                   {error}
@@ -224,10 +249,22 @@ export function AuthForm({
             </div>
           )}
           <div className="auth-foot" style={{ marginTop: 40, fontSize: 10 }}>
-            <Link href="/privacy">{t.privacy}</Link> · <Link href="/terms">{t.terms}</Link>
+            <Link href="/datenschutz">{t.privacy}</Link> · <Link href="/agb">{t.terms}</Link>
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+function FirstLoginNotice({ locale }: { locale: string }) {
+  const [first] = useState(() => typeof window !== 'undefined' && !!new URLSearchParams(window.location.search).get('first'));
+  if (!first) return null;
+  return (
+    <p className="notice" style={{ margin: '14px 0' }}>
+      {locale === 'de'
+        ? 'Willkommen! Dein Zugang wurde von deinem Betrieb angelegt. Bitte vergib aus Sicherheitsgründen jetzt ein eigenes Passwort.'
+        : 'Welcome! Your account was created by your business. Please choose your own password now.'}
+    </p>
   );
 }

@@ -16,6 +16,7 @@ export async function loadWorkspace(businessId?: string) {
     .eq('user_id', user.id);
   if (membershipError) throw new Error('WORKSPACE_UNAVAILABLE');
   const { data: supportBusiness } = await db.rpc('my_support_business');
+  const { data: profile } = await db.from('profiles').select('tutorials_off').eq('id', user.id).maybeSingle();
   const memberIds = [...(memberships || []).map((m) => m.business_id), ...(supportBusiness ? [supportBusiness as string] : [])];
   const { data: businesses, error } = await db
     .from('businesses')
@@ -96,6 +97,8 @@ export async function loadWorkspace(businessId?: string) {
   if (err) throw new Error('WORKSPACE_UNAVAILABLE');
   return {
     user: { id: user.id, email: user.email || '' },
+    tutorialsOff: !!profile?.tutorials_off,
+    mustChangePassword: !!user.app_metadata?.must_change_password,
     businesses: businesses as Business[],
     isAdmin: !!queries[10].data,
     workspace: {
