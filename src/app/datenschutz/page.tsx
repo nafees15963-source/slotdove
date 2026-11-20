@@ -92,7 +92,7 @@ export default function Page() {
       </p>
       <p>
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; unser berechtigtes Interesse liegt in der sicheren und fehlerfreien Bereitstellung. Hosting-Anbieter ist die Vercel Inc., 440 N Barranca Ave #4133,
-        Covina, CA 91723, USA. Server-Logs werden von Vercel nur kurzzeitig vorgehalten (in der Regel wenige Tage) und danach gelöscht.
+        Covina, CA 91723, USA. Server-Logs werden von Vercel nur kurzzeitig vorgehalten (in der Regel wenige Tage) und danach gelöscht. Aus der IP-Adresse ermittelt Vercel zudem das Herkunftsland; wir nutzen es nur im Moment des Aufrufs, um die Seite automatisch auf Deutsch oder Englisch anzuzeigen, und speichern es nicht. Eine selbst gewählte Sprache hat immer Vorrang.
       </p>
 
       <h2 id="cookies">Cookies und lokale Speicherung (TDDDG)</h2>
