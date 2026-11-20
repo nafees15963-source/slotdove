@@ -25,7 +25,7 @@ export function suggestSlots(
     (s) =>
       s.active &&
       (input.staffId ? s.id === input.staffId : true) &&
-      (input.staffId || !w.assignments.length || w.assignments.some((a) => a.staff_id === s.id && a.service_id === service.id)),
+      (input.staffId || !w.assignments.some((a) => a.service_id === service.id) || w.assignments.some((a) => a.staff_id === s.id && a.service_id === service.id)),
   );
   const out: SlotSuggestion[] = [];
   const dayBusy = (staffId: string | null) =>

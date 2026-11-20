@@ -65,9 +65,6 @@ export function computeInsights(w: Workspace): Insight[] {
         : { id: 'load', tone: 'good', value: pct, de: `Nächste 7 Tage zu ${pct} % ausgelastet.`, en: `Next 7 days are ${pct}% booked.` },
     );
   }
-  const noStaffService = w.services.filter((s) => s.active && !w.assignments.some((a) => a.service_id === s.id));
-  if (noStaffService.length && w.staff.length)
-    out.push({ id: 'assign', tone: 'info', href: '/dashboard/services', de: `${noStaffService.length} Leistungen sind online noch nicht buchbar, weil niemand zugeordnet ist.`, en: `${noStaffService.length} services cannot be booked online yet because no one is assigned.` });
   if (!w.business.published)
     out.push({ id: 'publish', tone: 'info', href: '/dashboard/booking', de: 'Deine Buchungsseite ist noch offline. Ein Klick genügt, wenn alles passt.', en: 'Your booking page is still offline. One click publishes it.' });
   const repeat = new Map<string, number>();

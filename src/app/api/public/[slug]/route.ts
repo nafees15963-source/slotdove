@@ -63,8 +63,14 @@ export async function GET(request: Request, context: { params: Promise<{ slug: s
     if (ae) throw ae;
     const requested = url.searchParams.get('staff');
     if (requested) z.uuid().parse(requested);
-    const staffIds = (assignments || [])
-      .map((a) => a.staff_id)
+    // No assignment = every active team member can take the appointment (assignment is optional).
+    let pool = (assignments || []).map((a) => a.staff_id);
+    if (!pool.length) {
+      const { data: all, error: te } = await db.from('staff_profiles').select('id').eq('business_id', b.id).eq('active', true);
+      if (te) throw te;
+      pool = (all || []).map((x) => x.id);
+    }
+    const staffIds = pool
       .filter((s) => !requested || s === requested)
       .sort();
     const slots: { start: string; staff_id: string }[] = [];

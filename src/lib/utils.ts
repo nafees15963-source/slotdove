@@ -27,3 +27,11 @@ export function csv(rows: Record<string, unknown>[]) {
     '\r\n',
   );
 }
+
+/** Team members who can perform a service. Assignment is optional: a service without
+ * any assignment can be done by every active team member. */
+export function staffForService<S extends { id: string; active: boolean }>(staff: S[], assignments: { service_id: string; staff_id: string }[], serviceId: string) {
+  const active = staff.filter((s) => s.active);
+  const assigned = active.filter((s) => assignments.some((a) => a.service_id === serviceId && a.staff_id === s.id));
+  return assigned.length ? assigned : active;
+}

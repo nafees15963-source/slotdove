@@ -133,7 +133,7 @@ export async function think(d: BrainData, history: { role: 'user' | 'assistant';
           published: d.business.published,
           booking_link: `/b/${d.business.slug}`,
           rules: { min_notice_minutes: d.business.min_notice_minutes, max_advance_days: d.business.max_advance_days, slot_interval: d.business.slot_interval, cancellation_hours: d.business.cancellation_hours, auto_confirm: d.business.auto_confirm },
-          services: d.services.map((s) => ({ name: s.name, minutes: s.duration_minutes, price: money(s.price_cents), active: s.active, buffer_after: s.buffer_after, staff: d.assignments.filter((x) => x.service_id === s.id).map((x) => staffName(x.staff_id)) })),
+          services: d.services.map((s) => ({ name: s.name, minutes: s.duration_minutes, price: money(s.price_cents), active: s.active, buffer_after: s.buffer_after, staff: d.assignments.some((x) => x.service_id === s.id) ? d.assignments.filter((x) => x.service_id === s.id).map((x) => staffName(x.staff_id)) : ['alle Teammitglieder'] })),
           team: d.staff.map((s) => ({
             name: s.name,
             active: s.active,

@@ -238,6 +238,26 @@ try {
       key,
       hash,
     ]);
+  await test('service without assignment is bookable online by any active team member', async () => {
+    const free = (await db.query("insert into services(business_id,name,duration_minutes) values($1,'Open Service',30) returning id", [b1])).rows[0].id;
+    const later = (await db.query("select ((current_date+3)+time '11:00') at time zone 'Europe/Berlin' as t")).rows[0].t.toISOString();
+    const c = await connect();
+    await c.query('set role service_role');
+    const ok = await c.query('select reserve_booking($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) r', [b1, free, st, later, 'Open Guest', 'open@example.test', '', '', randomUUID(), 'e'.repeat(64)]);
+    const id = ok.rows[0].r.id;
+    // Once someone is assigned, only assigned members may take public bookings.
+    const other = (await db.query("insert into staff_profiles(business_id,name) values($1,'Other') returning id", [b1])).rows[0].id;
+    await db.query('insert into service_staff values($1,$2,$3)', [b1, free, other]);
+    await assert.rejects(
+      c.query('select reserve_booking($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) r', [b1, free, st, later.replace('T10:', 'T12:').replace('T11:', 'T13:'), 'Open Guest', 'open2@example.test', '', '', randomUUID(), 'f'.repeat(64)]),
+      /INVALID_STAFF/,
+    );
+    await db.query("update bookings set status='cancelled' where id=$1", [id]);
+    await db.query('delete from bookings where id=$1', [id]);
+    await db.query('delete from service_staff where service_id=$1', [free]);
+    await db.query('delete from staff_profiles where id=$1', [other]);
+    await db.query('delete from services where id=$1', [free]);
+  });
   let bookingId: string;
   await test('concurrent slot reservations: exactly one succeeds', async () => {
     const x = await connect(),

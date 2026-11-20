@@ -9,7 +9,7 @@ import { Button } from '../ui/button';
 import { useI18n } from '../providers';
 import { useWorkspace } from './shell';
 import { api, friendlyError } from '@/lib/api-client';
-import { dateLabel } from '@/lib/utils';
+import { dateLabel, staffForService } from '@/lib/utils';
 import type { Booking, Customer, Service, Staff } from '@/lib/types';
 import { Status } from './common';
 import { InfoTip } from '../tutorial';
@@ -54,11 +54,7 @@ export function EntityForm({
                 : t.invitation;
   const staff =
     kind === 'booking'
-      ? w.staff.filter(
-          (st) =>
-            st.active &&
-            w.assignments.some((a) => a.service_id === selectedService && a.staff_id === st.id),
-        )
+      ? staffForService(w.staff, w.assignments, selectedService)
       : w.staff.filter((s) => s.active);
   function localTime(value: string) {
     const time = fromZonedTime(value, w.business.timezone);
@@ -507,7 +503,7 @@ export function BookingDetail({
             <label htmlFor="assign-booking">{t.employee}</label>
             <select id="assign-booking" value={booking.staff_id || ''} disabled={busy} onChange={(e) => update({ staff_id: e.target.value || null })}>
               <option value="">{locale === 'de' ? 'Noch nicht zugewiesen' : 'Unassigned'}</option>
-              {w.staff.filter((s) => s.active && w.assignments.some((a) => a.staff_id === s.id && a.service_id === booking.service_id)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {staffForService(w.staff, w.assignments, booking.service_id).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>}
           <div className="row wrap">

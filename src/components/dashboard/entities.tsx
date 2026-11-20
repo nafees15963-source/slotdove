@@ -389,6 +389,11 @@ export function Entities({ kind }: { kind: 'services' | 'customers' | 'staff' })
       <Dialog open={!!assign} onOpenChange={(v) => !v && setAssign(null)} title={t.assign}>
         {assign && (
           <div className="stack">
+            <p className="notice" style={{ fontSize: 12 }}>
+              {locale === 'de'
+                ? 'Optional: Ohne Zuteilung ist die Leistung trotzdem buchbar – dann übernimmt jeder freie Mitarbeiter. Hakst du jemanden an, bekommen nur die Angehakten Online-Buchungen. Termine kannst du jederzeit umverteilen.'
+                : 'Optional: without assignment the service is still bookable by any free team member. Ticking people limits online bookings to them.'}
+            </p>
             {w.staff
               .filter((s) => s.active)
               .map((s) => {
