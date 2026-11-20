@@ -53,6 +53,10 @@ export function friendlyError(error: unknown, locale: string) {
       'Please enter an https link from PayPal, Ko-fi, Buy Me a Coffee or Stripe.',
       'Bitte einen https-Link von PayPal (paypal.me), Ko-fi, Buy Me a Coffee oder Stripe eingeben.',
     ],
+    TERMS_REQUIRED: [
+      'Please sign the current terms first (reload the page).',
+      'Bitte unterschreibe zuerst die aktuellen Nutzungsbedingungen (Seite neu laden).',
+    ],
     LEGAL_REQUIRED: [
       'Please accept the terms and the data processing agreement.',
       'Bitte akzeptiere die AGB und den Auftragsverarbeitungsvertrag.',

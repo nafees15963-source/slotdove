@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { body, failure, HttpError, json, requireAdmin, sameOrigin, softRateLimit } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { noticeEmail, sendEmail } from '@/lib/email';
-import { generatePassword } from '@/lib/trust';
+import { generatePassword, LEGAL_VERSION } from '@/lib/trust';
 import { text } from '@/lib/sanitize';
 import { csv } from '@/lib/utils';
 import { safeSupportUrl } from '@/lib/release';
@@ -130,6 +130,27 @@ export async function GET(request: Request) {
         tickets: tickets.data || [],
         users: (users.data?.users || []).filter((u) => u.email?.toLowerCase().includes(ql) || u.id === q).slice(0, 20).map((u) => ({ id: u.id, email: u.email, created_at: u.created_at })),
       });
+    }
+    if (view === 'signatures') {
+      const [{ data, error }, users, owners] = await Promise.all([
+        db.from('legal_acceptances').select('user_id,version,signer_name,accepted_at,ip_hash,user_agent').eq('method', 'signature').eq('document', 'terms').order('accepted_at', { ascending: false }).limit(2000),
+        db.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+        db.from('businesses').select('owner_id,name'),
+      ]);
+      if (error) throw error;
+      const email = new Map((users.data?.users || []).map((u) => [u.id, u.email || '']));
+      const biz = new Map<string, string[]>();
+      for (const b of owners.data || []) biz.set(b.owner_id, [...(biz.get(b.owner_id) || []), b.name]);
+      const signed = new Set((data || []).map((r) => `${r.user_id}:${r.version}`));
+      const rows = (data || []).map((r) => ({ ...r, email: email.get(r.user_id || '') || '—', businesses: biz.get(r.user_id || '') || [] }));
+      const missing = (users.data?.users || [])
+        .filter((u) => !signed.has(`${u.id}:${LEGAL_VERSION}`))
+        .map((u) => ({ user_id: u.id, email: u.email || '', businesses: biz.get(u.id) || [] }));
+      if (url.searchParams.get('csv'))
+        return new Response(csv(rows.map((r) => ({ Name: r.signer_name, EMail: r.email, Betrieb: r.businesses.join(' / '), Version: r.version, Zeitpunkt: r.accepted_at, Netzwerk_Hash: r.ip_hash || '', Browser: r.user_agent }))), {
+          headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="slotdove-unterschriften.csv"', 'Cache-Control': 'private, no-store' },
+        });
+      return json({ version: LEGAL_VERSION, rows, missing });
     }
     if (view === 'audit-csv') {
       const { data, error } = await db.from('admin_audit_logs').select('*').order('created_at', { ascending: false }).limit(10000);

@@ -599,15 +599,15 @@ export function Billing() {
         <strong>0 €</strong>
         <span>
           {de ? `Alle Funktionen kostenlos · ${from} – ${until}` : `All features free · ${from} – ${until}`}
-          <small>{de ? 'Kein Abo, keine Zahlungsdaten, nichts zu kündigen. Vor dem Ende informieren wir dich rechtzeitig – ohne deine Zustimmung entstehen keine Kosten.' : 'No subscription, no payment details, nothing to cancel. We will inform you before the end – nothing is charged without your consent.'}</small>
+          <small>{de ? 'Slotdove ist ein privates, nicht-kommerzielles Testprojekt: Es wird kein Geld verlangt, es gibt kein Abo und nichts zu kündigen. Bereitstellung ohne Gewähr.' : 'Slotdove is a private, non-commercial test project: no money is requested, no subscription. Provided without warranty.'}</small>
         </span>
       </div>
       <SupportCard support={cfg.support} de={de} compact />
-      <h3 style={{ margin: '26px 0 12px' }}>{de ? `Voraussichtliche Tarife ab ${after}` : `Expected plans from ${after}`}</h3>
+      <h3 style={{ margin: '26px 0 12px' }}>{de ? `Unverbindliche Beispielpreise für eine mögliche Weiterführung ab ${after}` : `Non-binding example prices for a possible continuation from ${after}`}</h3>
       <div className="plan-grid">
         {plans.map((p) => (
           <div key={p.id} className={`plan-card ${p.id === 'pro' ? 'featured' : ''}`}>
-            <span className="badge">{de ? `voraussichtlich ab ${after}` : `expected from ${after}`}</span>
+            <span className="badge">{de ? 'nur Beispiel' : 'example only'}</span>
             <h3>{p.name}</h3>
             <div className="plan-price">
               <strong>{p.price} €</strong>

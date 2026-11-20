@@ -4349,3 +4349,16 @@ code.num {
 .support-card.compact { padding: 14px 16px; gap: 12px; }
 @media (max-width: 640px) { .support-card { flex-direction: column; align-items: flex-start; } .free-banner { flex-direction: column; align-items: flex-start; } }
 .dark .support-card { border-color: #24464a; }
+
+/* Electronic signature of the terms */
+.sign-page { min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px; background: var(--bg); }
+.sign-card { width: 100%; max-width: 680px; display: grid; gap: 16px; }
+.sign-card h1 { display: flex; align-items: center; gap: 10px; font-size: 26px; letter-spacing: -0.02em; }
+.sign-points { display: grid; gap: 8px; padding: 14px 18px 14px 34px; border-radius: 14px; background: var(--surface-2, #eef5f5); font-size: 14px; line-height: 1.5; }
+.sign-checks .check-label { align-items: flex-start; line-height: 1.45; font-size: 13.5px; }
+.sign-checks .check-label input { margin-top: 3px; flex: none; }
+.sign-input { font-size: 18px; }
+.sign-preview { font-family: 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', cursive; font-size: 34px; color: var(--deep); border-bottom: 1px solid #b8cfcf; padding: 2px 6px 4px; overflow-wrap: anywhere; }
+.dark .sign-preview { color: var(--accent); }
+.sign-mini { font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 20px; color: var(--deep); }
+.footer-project { font-size: 12px; opacity: .75; margin: 18px 0 0; max-width: 760px; line-height: 1.5; }

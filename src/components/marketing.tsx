@@ -82,6 +82,11 @@ export async function MarketingFooter() {
             </div>
           </div>
         </div>
+        <p className="footer-project">
+          {locale === 'de'
+            ? '„Slotdove“ ist der Projektname eines privaten, nicht-kommerziellen Testprojekts. Die Nutzung ist kostenlos, es wird kein Geld verlangt. Bereitstellung ohne Gewähr.'
+            : '“Slotdove” is the name of a private, non-commercial test project. Use is free of charge; no money is requested. Provided without warranty.'}
+        </p>
         <div className="footer-bottom">
           <span>{m.rights}</span>
           <Preferences />

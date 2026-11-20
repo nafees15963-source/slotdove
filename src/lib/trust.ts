@@ -3,7 +3,7 @@ import { createHmac, randomInt } from 'node:crypto';
 import { supabaseAdmin } from './supabase/admin';
 
 /** Current version of AGB / Datenschutz / AVV. Bump when the texts change materially. */
-export const LEGAL_VERSION = '2026-11-20.2';
+export const LEGAL_VERSION = '2026-11-20.3';
 
 /** Strong, readable one-time password (no ambiguous characters). */
 export function generatePassword(length = 16) {
@@ -64,4 +64,18 @@ export async function platformSetting(key: 'maintenance' | 'signups' | 'public_b
   } catch {
     return fallback;
   }
+}
+
+/** True when the user electronically signed the current version of the terms. Fails closed only when configured. */
+export async function hasSignedTerms(userId: string) {
+  if (!process.env.SUPABASE_SECRET_KEY) return true; // local development without server key
+  const { count, error } = await supabaseAdmin()
+    .from('legal_acceptances')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('version', LEGAL_VERSION)
+    .eq('method', 'signature')
+    .eq('document', 'terms');
+  if (error) return true; // never lock users out because of a read error
+  return (count || 0) > 0;
 }

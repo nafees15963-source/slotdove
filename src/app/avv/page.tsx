@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { LegalPage, Ph } from '@/components/legal';
+import { LegalPage } from '@/components/legal';
+import { OPERATOR } from '@/lib/operator';
 export const metadata: Metadata = { title: 'Auftragsverarbeitungsvertrag (AVV) – Slotdove', description: 'Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO inkl. TOM und Unterauftragsverarbeitern.' };
 
 export default function Page() {
@@ -26,7 +27,7 @@ export default function Page() {
       ]}
     >
       <p>
-        zwischen dem Kunden von Slotdove (Betrieb) – nachfolgend <strong>„Verantwortlicher“</strong> – und <Ph>VOR- UND NACHNAME / FIRMA</Ph>, <Ph>ANSCHRIFT</Ph> – nachfolgend{' '}
+        zwischen dem Kunden von Slotdove (Betrieb) – nachfolgend <strong>„Verantwortlicher“</strong> – und {OPERATOR.name}, {OPERATOR.street}, {OPERATOR.city} (Betreiber des privaten Testprojekts „Slotdove“) – nachfolgend{' '}
         <strong>„Auftragsverarbeiter“</strong>.
       </p>
       <p>
@@ -90,7 +91,7 @@ export default function Page() {
         <li>Er gewährleistet eine strikte logische Trennung der Daten verschiedener Verantwortlicher (Mandantentrennung).</li>
         <li>Er führt ein Verzeichnis von Verarbeitungstätigkeiten nach Art. 30 Abs. 2 DSGVO.</li>
         <li>Er unterstützt den Verantwortlichen bei der Einhaltung der Pflichten aus Art. 32 bis 36 DSGVO (Sicherheit, Meldungen, Datenschutz-Folgenabschätzung, Konsultation).</li>
-        <li>Sofern gesetzlich erforderlich, benennt er einen Datenschutzbeauftragten. Kontakt für Datenschutzfragen: <Ph>E-MAIL-ADRESSE</Ph>.</li>
+        <li>Sofern gesetzlich erforderlich, benennt er einen Datenschutzbeauftragten. Kontakt für Datenschutzfragen: {OPERATOR.email}.</li>
       </ol>
 
       <h2 id="p5">§ 5 Vertraulichkeit</h2>

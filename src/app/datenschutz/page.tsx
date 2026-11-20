@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { LegalPage, Ph } from '@/components/legal';
+import { LegalPage } from '@/components/legal';
+import { OPERATOR, PROJECT_NOTE } from '@/lib/operator';
 export const metadata: Metadata = { title: 'Datenschutzerklärung – Slotdove', description: 'Informationen nach Art. 13 und 14 DSGVO zur Verarbeitung personenbezogener Daten bei Slotdove.' };
 
 const toc: [string, string][] = [
@@ -49,15 +50,15 @@ export default function Page() {
       <p>
         Verantwortlicher im Sinne des Art. 4 Nr. 7 DSGVO für die Verarbeitungen, die Slotdove als eigene Plattform betreibt:
         <br />
-        <Ph>VOR- UND NACHNAME</Ph>
+        {OPERATOR.name}
         <br />
-        <Ph>STRASSE UND HAUSNUMMER</Ph>, <Ph>PLZ ORT</Ph>, Deutschland
+        {OPERATOR.street}, {OPERATOR.city}, {OPERATOR.country}
         <br />
-        E-Mail: <Ph>E-MAIL-ADRESSE</Ph> · Telefon: <Ph>TELEFONNUMMER</Ph>
+        E-Mail: <a href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>
       </p>
       <p>
-        Datenschutzanfragen richten Sie bitte an <Ph>DATENSCHUTZ-E-MAIL (kann dieselbe Adresse sein)</Ph>. Ein Datenschutzbeauftragter ist nach Art. 37 DSGVO i. V. m. § 38 BDSG derzeit nicht benannt,
-        da die gesetzlichen Voraussetzungen nicht vorliegen. <Ph>Falls doch benannt: Name und Kontakt des Datenschutzbeauftragten</Ph>
+        {PROJECT_NOTE} Datenschutzanfragen richten Sie bitte an {OPERATOR.email}. Ein Datenschutzbeauftragter ist nach Art. 37 DSGVO i. V. m. § 38 BDSG derzeit nicht benannt,
+        da die gesetzlichen Voraussetzungen nicht vorliegen.
       </p>
 
       <h2 id="ueberblick">Überblick: Wer ist wofür verantwortlich?</h2>
@@ -299,7 +300,7 @@ export default function Page() {
       </table>
       <p>
         Darüber hinaus können Daten an Behörden weitergegeben werden, wenn wir hierzu gesetzlich verpflichtet sind (z. B. Art. 10 DSA, Strafverfolgung), sowie an Steuerberater im Rahmen der
-        gesetzlichen Pflichten. <Ph>Falls genutzt: Zahlungsdienstleister (z. B. Stripe, PayPal) mit Zweck und Sitz ergänzen</Ph>
+        gesetzlichen Pflichten.
       </p>
 
       <h2 id="drittland">Übermittlungen in Drittländer</h2>
@@ -362,7 +363,7 @@ export default function Page() {
           <strong>Voranmeldung:</strong> Eine kurze E-Mail an uns genügt.
         </li>
         <li>
-          <strong>Alle anderen Fälle:</strong> Schreiben Sie an <Ph>DATENSCHUTZ-E-MAIL</Ph>. Wir beantworten Anfragen innerhalb eines Monats und bestätigen die Löschung.
+          <strong>Alle anderen Fälle:</strong> Schreiben Sie an {OPERATOR.email}. Wir beantworten Anfragen innerhalb eines Monats und bestätigen die Löschung.
         </li>
       </ul>
 
@@ -394,7 +395,7 @@ export default function Page() {
       <h2 id="beschwerde">Beschwerderecht bei einer Aufsichtsbehörde</h2>
       <p>
         Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren (Art. 77 DSGVO), insbesondere in dem Mitgliedstaat Ihres Aufenthaltsorts, Ihres Arbeitsplatzes oder des Orts des
-        mutmaßlichen Verstoßes. Für uns zuständig ist: <Ph>ZUSTÄNDIGE LANDESDATENSCHUTZBEHÖRDE des Bundeslandes Ihres Sitzes, mit Anschrift</Ph>.
+        mutmaßlichen Verstoßes. Für uns zuständig ist: das Unabhängige Landeszentrum für Datenschutz Schleswig-Holstein (ULD), Holstenstraße 98, 24103 Kiel, https://www.datenschutzzentrum.de.
       </p>
 
       <h2 id="pflicht">Pflicht zur Bereitstellung, automatisierte Entscheidungen</h2>

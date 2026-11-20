@@ -1,30 +1,31 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
-import { LegalPage, Ph } from '@/components/legal';
+import Link from 'next/link';
+import { LegalPage } from '@/components/legal';
 import { dateDe, publicSettings } from '@/lib/release';
-export const metadata: Metadata = { title: 'AGB – Slotdove', description: 'Allgemeine Geschäftsbedingungen für die Nutzung der Terminbuchungssoftware Slotdove durch Unternehmer.' };
+import { OPERATOR } from '@/lib/operator';
+export const metadata: Metadata = {
+  title: 'Nutzungsbedingungen – Slotdove',
+  description: 'Nutzungsbedingungen für das kostenlose, private Testprojekt Slotdove (Online-Terminbuchung).',
+};
 
 const toc: [string, string][] = [
-  ['geltung', 'Geltungsbereich, Unternehmereigenschaft'],
-  ['leistung', 'Leistungsbeschreibung'],
-  ['vertrag', 'Registrierung und Vertragsschluss'],
-  ['test', 'Kostenlose Startphase, Demo-Zugänge'],
-  ['preise', 'Tarife, Preise und Zahlung'],
-  ['pflichten', 'Pflichten des Kunden'],
-  ['endkunden', 'Verhältnis zu Endkunden des Kunden'],
-  ['inhalte', 'Inhalte des Kunden, Nutzungsrechte'],
+  ['projekt', 'Betreiber und Art des Projekts'],
+  ['geltung', 'Geltungsbereich und Nutzerkreis'],
+  ['zugang', 'Zugang, Freigabe und Unterschrift'],
+  ['kostenlos', 'Kostenlose Nutzung, keine Entgelte'],
+  ['leistung', 'Leistungsumfang „wie besehen“'],
+  ['termine', 'Termine, Ausfälle und eigene Vorsorge'],
+  ['pflichten', 'Pflichten der Nutzer'],
+  ['inhalte', 'Inhalte und Nutzungsrechte'],
   ['verboten', 'Verbotene Nutzung'],
   ['moderation', 'Meldeverfahren, Moderation und Sperrung (DSA)'],
   ['ki', 'KI-Funktionen'],
-  ['unterstuetzung', 'Freiwillige Unterstützung'],
-  ['verfuegbarkeit', 'Verfügbarkeit, Wartung, Änderungen'],
   ['datenschutz', 'Datenschutz und Auftragsverarbeitung'],
   ['sicherheit', 'Zugangsdaten und Sicherheit'],
   ['haftung', 'Haftung'],
   ['freistellung', 'Freistellung'],
-  ['laufzeit', 'Laufzeit und Kündigung'],
-  ['datenende', 'Datenexport und Löschung bei Vertragsende'],
-  ['aenderung', 'Änderungen der AGB'],
+  ['ende', 'Laufzeit, Beendigung und Ende der Testphase'],
+  ['aenderung', 'Änderungen dieser Bedingungen'],
   ['schluss', 'Schlussbestimmungen'],
 ];
 
@@ -33,299 +34,203 @@ export default async function Page() {
   const from = dateDe(release.free_from),
     until = dateDe(release.free_until);
   return (
-    <LegalPage title="Allgemeine Geschäftsbedingungen (AGB)" toc={toc}>
-      <p>
-        Diese Allgemeinen Geschäftsbedingungen regeln die Nutzung der Software „Slotdove“ (nachfolgend „Dienst“), angeboten von <Ph>VOR- UND NACHNAME / FIRMA</Ph>, <Ph>ANSCHRIFT</Ph> (nachfolgend
-        „Anbieter“, „wir“).
+    <LegalPage title="Nutzungsbedingungen" toc={toc}>
+      <p className="notice">
+        <strong>Kurz gesagt:</strong> Slotdove ist ein privates, kostenloses Testprojekt. Es wird kein Geld verlangt. Die Nutzung erfolgt ohne Gewähr. Für ausgefallene, falsche oder doppelte Termine,
+        nicht zugestellte E-Mails, Ausfälle und Datenverluste wird – soweit gesetzlich zulässig – nicht gehaftet. Bitte führe wichtige Termine zusätzlich selbst und exportiere regelmäßig deine Daten.
+        Verbindlich ist der vollständige Text unten.
       </p>
 
-      <h2 id="geltung">§ 1 Geltungsbereich, Unternehmereigenschaft</h2>
+      <h2 id="projekt">§ 1 Betreiber und Art des Projekts</h2>
       <ol>
         <li>
-          Diese AGB gelten für alle Verträge über die Nutzung des Dienstes zwischen dem Anbieter und seinen Kunden. Der Dienst richtet sich <strong>ausschließlich an Unternehmer</strong> im Sinne des
-          § 14 BGB, juristische Personen des öffentlichen Rechts und öffentlich-rechtliche Sondervermögen (nachfolgend „Kunde“). Mit der Registrierung bestätigt der Kunde, in Ausübung seiner gewerblichen
-          oder selbständigen beruflichen Tätigkeit zu handeln.
+          „Slotdove“ ist der Projektname eines <strong>privaten, nicht-kommerziellen Testprojekts</strong> von {OPERATOR.name}, {OPERATOR.street}, {OPERATOR.city} (nachfolgend „Betreiber“). Es
+          besteht kein Gewerbe, kein Unternehmen und keine Gewinnerzielungsabsicht.
         </li>
-        <li>Abweichende, entgegenstehende oder ergänzende Bedingungen des Kunden werden nicht Vertragsbestandteil, auch wenn wir ihnen nicht ausdrücklich widersprechen.</li>
-        <li>Individuelle Vereinbarungen in Textform haben Vorrang vor diesen AGB.</li>
-        <li>Endkunden des Kunden, die über eine Buchungsseite einen Termin buchen, werden nicht Vertragspartner des Anbieters; für sie gelten die Bedingungen des jeweiligen Kunden.</li>
+        <li>
+          Zweck des Projekts ist es, während einer Testphase von voraussichtlich einem Jahr (vom {from} bis zum {until}) herauszufinden, ob Interesse an einer einfachen Online-Terminbuchung für kleine
+          Betriebe besteht, und die Software mit Rückmeldungen der Nutzer zu verbessern.
+        </li>
+        <li>Die Software befindet sich in Entwicklung. Sie ist kein fertiges, kommerzielles Produkt.</li>
       </ol>
 
-      <h2 id="leistung">§ 2 Leistungsbeschreibung</h2>
+      <h2 id="geltung">§ 2 Geltungsbereich und Nutzerkreis</h2>
       <ol>
         <li>
-          Slotdove ist eine webbasierte Software-as-a-Service-Lösung für Online-Terminbuchung. Der Funktionsumfang umfasst je nach Tarif insbesondere: öffentliche Buchungsseite, Kalender und
-          Terminverwaltung, Verwaltung von Leistungen, Mitarbeitern, Arbeitszeiten, Pausen und Feiertagen, Kundenkartei, automatische E-Mail-Bestätigungen und -Erinnerungen, Kunden-Chat, Auswertungen,
-          Teamzugänge sowie optionale KI-Funktionen.
+          Diese Nutzungsbedingungen gelten für alle Personen, die ein Konto bei Slotdove anlegen oder nutzen, insbesondere Inhaber von Betrieben und deren Teammitglieder (nachfolgend „Nutzer“). Für Kunden
+          eines Betriebs, die über eine Buchungsseite einen Termin buchen, gelten die Bedingungen des jeweiligen Betriebs; sie werden nicht Vertragspartner des Betreibers.
         </li>
-        <li>Der konkrete Leistungsumfang ergibt sich aus der bei Vertragsschluss gültigen Tarifbeschreibung auf der Website.</li>
-        <li>
-          Der Anbieter schuldet die Bereitstellung der Software über das Internet, nicht deren Überlassung. Die Internetverbindung bis zum Rechenzentrum sowie geeignete Endgeräte und aktuelle Browser
-          stellt der Kunde.
-        </li>
-        <li>
-          Der Anbieter ist nicht Partei der zwischen Kunde und Endkunden geschlossenen Verträge über Dienstleistungen und übernimmt keine Gewähr für deren Durchführung, Bezahlung oder für das Erscheinen von
-          Endkunden.
-        </li>
-        <li>Funktionen, die als „Beta“ gekennzeichnet sind, werden ohne Verfügbarkeitszusage zur Erprobung bereitgestellt und können geändert oder eingestellt werden.</li>
+        <li>Nutzer müssen volljährig sein. Wer für einen Betrieb handelt, versichert, hierzu berechtigt zu sein.</li>
+        <li>Abweichende Bedingungen der Nutzer gelten nicht.</li>
       </ol>
 
-      <h2 id="vertrag">§ 3 Registrierung und Vertragsschluss</h2>
+      <h2 id="zugang">§ 3 Zugang, Freigabe und Unterschrift</h2>
       <ol>
-        <li>Die Darstellung der Tarife auf der Website stellt kein bindendes Angebot dar. Als „voraussichtlich“ bezeichnete Preise sind unverbindlich.</li>
         <li>
-          Während der Startphase ist eine Registrierung nur nach Voranmeldung und Freigabe durch uns möglich. Die Freigabe erfolgt durch einen persönlichen, befristeten Registrierungslink. Wir können
-          Voranmeldungen ohne Angabe von Gründen ablehnen; die Gleichbehandlungsgrundsätze des AGG bleiben unberührt.
+          Während der Testphase ist eine Registrierung nur nach Voranmeldung und Freigabe durch den Betreiber oder auf Einladung eines bereits freigegebenen Betriebs möglich. Ein Anspruch auf Freigabe
+          besteht nicht.
         </li>
         <li>
-          Mit Abschluss der Registrierung und Bestätigung dieser AGB, der Datenschutzerklärung und des Auftragsverarbeitungsvertrags gibt der Kunde ein Angebot auf Abschluss eines Nutzungsvertrags ab. Der
-          Vertrag kommt mit Freischaltung des Kontos zustande.
+          Vor der Nutzung des Dashboards muss der Nutzer diesen Nutzungsbedingungen, der Datenschutzerklärung und – als Betrieb – dem Auftragsverarbeitungsvertrag ausdrücklich zustimmen und die
+          Zustimmung durch Eingabe seines vollständigen Namens elektronisch unterzeichnen. Der Betreiber speichert Name, Zeitpunkt, Version der Texte und einen pseudonymisierten Netzwerk-Hash als
+          Nachweis.
         </li>
-        <li>Der Kunde ist verpflichtet, wahrheitsgemäße und vollständige Angaben zu machen und diese aktuell zu halten. Ein Anspruch auf Vertragsschluss besteht nicht.</li>
-        <li>Die für den Kunden handelnde Person versichert, zur Vertretung berechtigt und volljährig zu sein.</li>
+        <li>Mit der Unterzeichnung kommt ein unentgeltlicher Nutzungsvertrag nach diesen Bedingungen zustande.</li>
       </ol>
 
-      <h2 id="test">§ 4 Kostenlose Startphase, Demo-Zugänge</h2>
+      <h2 id="kostenlos">§ 4 Kostenlose Nutzung, keine Entgelte</h2>
       <ol>
         <li>
-          Vom <strong>{from}</strong> bis zum <strong>{until}</strong> (Startphase) stellen wir den Dienst mit allen Funktionen <strong>unentgeltlich</strong> bereit. Es wird kein Abonnement abgeschlossen,
-          es werden keine Zahlungsdaten erhoben, und nichts verlängert sich automatisch kostenpflichtig.
+          Die Nutzung von Slotdove ist <strong>vollständig kostenlos</strong>. Der Betreiber verlangt kein Entgelt, schließt keine Abonnements ab und erhebt keine Zahlungsdaten. Nichts verlängert sich
+          automatisch kostenpflichtig.
         </li>
         <li>
-          Ein kostenpflichtiger Vertrag entsteht nach der Startphase nur, wenn der Kunde ausdrücklich einen kostenpflichtigen Tarif bucht. Wir informieren den Kunden mindestens vier Wochen vor Ende der
-          Startphase in Textform über die dann geltenden Tarife. Bucht der Kunde keinen Tarif, kann er seine Daten exportieren; danach wird der Zugang eingeschränkt und das Konto frühestens 30 Tage nach
-          Ende der Startphase gelöscht, worauf wir vorher hinweisen.
+          Auf der Website genannte Preise sind lediglich unverbindliche Beispiele für eine mögliche spätere Weiterführung. Sollte Slotdove nach der Testphase jemals kostenpflichtig angeboten werden,
+          geschieht dies nur durch einen neuen, gesonderten Vertrag, dem der Nutzer ausdrücklich zustimmen muss. Ohne diese Zustimmung entstehen niemals Kosten.
         </li>
         <li>
-          Wir können die unentgeltliche Bereitstellung aus wichtigem Grund oder mit einer Frist von vier Wochen beenden oder verlängern. Eine Verlängerung oder Änderung des Zeitraums teilen wir auf der
-          Website und im Dashboard mit.
-        </li>
-        <li>
-          Für die unentgeltliche Bereitstellung haften wir abweichend von § 15 Abs. 2 nur für Vorsatz und grobe Fahrlässigkeit sowie bei Verletzung von Leben, Körper oder Gesundheit und nach dem
-          Produkthaftungsgesetz (vgl. §§ 521, 599 BGB). Unsere datenschutzrechtliche Haftung (Art. 82 DSGVO) bleibt unberührt.
-        </li>
-        <li>Demo-Zugänge enthalten Beispieldaten; E-Mails an Dritte werden aus Demo-Konten nicht versendet. Demo-Betriebe werden 30 Tage nach Ende der Demo automatisch gelöscht.</li>
-      </ol>
-
-      <h2 id="preise">§ 5 Tarife, Preise und Zahlung</h2>
-      <ol>
-        <li>
-          Während der Startphase (§ 4) fallen keine Entgelte an. Nach der Startphase gelten – nur bei ausdrücklicher Buchung – die zum Zeitpunkt der Buchung auf der Website angegebenen Preise (voraussichtlich
-          ab 5 €, 15 € bzw. 25 € pro Monat je nach Tarif). Alle Preise verstehen sich{' '}
-          <Ph>zzgl. der gesetzlichen Umsatzsteuer – ODER bei Kleinunternehmerregelung: „ohne Ausweis der Umsatzsteuer gemäß § 19 UStG“</Ph>.
-        </li>
-        <li>Die Vergütung ist monatlich bzw. jährlich im Voraus fällig. Rechnungen werden elektronisch gestellt; der Kunde stimmt der elektronischen Rechnungsstellung zu.</li>
-        <li>
-          Gerät der Kunde mit der Zahlung mehr als 14 Tage in Verzug, können wir den Zugang nach vorheriger Ankündigung in Textform vorübergehend sperren. Die Pflicht zur Zahlung bleibt bestehen. Gesetzliche
-          Verzugszinsen (§ 288 Abs. 2 BGB) bleiben vorbehalten.
-        </li>
-        <li>
-          Preisänderungen kündigen wir mindestens sechs Wochen vor Inkrafttreten in Textform an. Der Kunde kann zum Zeitpunkt des Inkrafttretens außerordentlich kündigen. Auf dieses Recht weisen wir in der
-          Ankündigung hin.
-        </li>
-        <li>Wir erheben keine Provision auf Buchungen des Kunden.</li>
-      </ol>
-
-      <h2 id="pflichten">§ 6 Pflichten des Kunden</h2>
-      <ol>
-        <li>Der Kunde ist für die Inhalte seiner Buchungsseite, Leistungsbeschreibungen, Preise, Bilder, Chatnachrichten und alle sonstigen von ihm eingestellten Daten allein verantwortlich.</li>
-        <li>
-          Der Kunde erfüllt die ihn treffenden rechtlichen Pflichten selbst, insbesondere: eigenes Impressum und eigene Datenschutzinformationen gegenüber seinen Endkunden, Preisangabenverordnung,
-          berufsrechtliche Vorgaben (z. B. für Heilberufe), Informationspflichten gegenüber Verbrauchern, ggf. Widerrufsbelehrungen für außerhalb von Geschäftsräumen bzw. im Fernabsatz geschlossene
-          Verträge, Stornoregelungen sowie steuerliche Pflichten.
-        </li>
-        <li>
-          Der Kunde verarbeitet über den Dienst keine besonderen Kategorien personenbezogener Daten (Art. 9 DSGVO, z. B. Diagnosen), es sei denn, dies ist für seinen Betrieb erforderlich, rechtlich
-          zulässig und er hat geeignete Schutzmaßnahmen getroffen. Freitextfelder sind hierfür grundsätzlich nicht vorgesehen.
-        </li>
-        <li>Der Kunde informiert seine Beschäftigten, für die er Zugänge anlegt, über die Datenverarbeitung und stellt sicher, dass sie diese AGB und die Sicherheitsvorgaben einhalten.</li>
-        <li>Der Kunde sichert eigene wichtige Daten regelmäßig über die bereitgestellten Exportfunktionen.</li>
-        <li>Der Kunde meldet erkannte Sicherheitslücken, Störungen oder Missbrauch unverzüglich an uns.</li>
-      </ol>
-
-      <h2 id="endkunden">§ 7 Verhältnis zu Endkunden des Kunden</h2>
-      <ol>
-        <li>Buchungen kommen ausschließlich zwischen dem Kunden und seinen Endkunden zustande. Der Kunde ist für Bestätigung, Durchführung, Absage und Abrechnung verantwortlich.</li>
-        <li>Wir versenden in seinem Auftrag transaktionale E-Mails (Bestätigung, Erinnerung, Änderung). Werbliche E-Mails an Endkunden sind über den Dienst nicht zulässig.</li>
-        <li>
-          Der Kunde kann Endkunden bei sachlichem Grund (z. B. wiederholtes Nichterscheinen, Beleidigungen, Betrug) von der Online-Buchung in seinem Betrieb ausschließen. Er darf dabei nicht gegen das
-          Allgemeine Gleichbehandlungsgesetz (AGG) verstoßen; Benachteiligungen etwa wegen der ethnischen Herkunft, des Geschlechts, der Religion, einer Behinderung, des Alters oder der sexuellen Identität
-          sind untersagt.
+          Freiwillige Unterstützungen (z. B. über PayPal) sind möglich. Sie erfolgen ohne Gegenleistung, begründen keine Ansprüche, haben keinen Einfluss auf die Nutzung und werden ausschließlich für
+          die laufenden Kosten des Projekts verwendet. Es handelt sich nicht um Spenden im steuerlichen Sinn; eine Spendenquittung wird nicht ausgestellt. Versehentlich gezahlte Beträge werden auf
+          Anfrage innerhalb von 14 Tagen erstattet.
         </li>
       </ol>
 
-      <h2 id="inhalte">§ 8 Inhalte des Kunden, Nutzungsrechte</h2>
+      <h2 id="leistung">§ 5 Leistungsumfang „wie besehen“</h2>
       <ol>
-        <li>Alle Rechte an den Inhalten des Kunden verbleiben beim Kunden.</li>
         <li>
-          Der Kunde räumt uns ein einfaches, auf die Vertragslaufzeit beschränktes Recht ein, seine Inhalte (z. B. Logo, Bilder, Texte) zu speichern, zu vervielfältigen, technisch zu bearbeiten (z. B.
-          Größenanpassung) und öffentlich zugänglich zu machen, soweit dies zur Erbringung des Dienstes erforderlich ist.
+          Slotdove stellt eine webbasierte Software für Online-Terminbuchung bereit (u. a. Buchungsseite, Kalender, Kunden- und Teamverwaltung, E-Mail-Benachrichtigungen, Chat, Auswertungen, KI-Funktionen).
         </li>
-        <li>Der Kunde versichert, über alle erforderlichen Rechte an hochgeladenen Inhalten zu verfügen (insbesondere Urheber-, Marken- und Persönlichkeitsrechte abgebildeter Personen).</li>
         <li>
-          An der Software, dem Design, dem Logo und der Dokumentation von Slotdove erhält der Kunde ein einfaches, nicht übertragbares, nicht unterlizenzierbares Nutzungsrecht für die Vertragslaufzeit.
-          Reverse Engineering, automatisiertes Auslesen (Scraping) und das Umgehen technischer Schutzmaßnahmen sind untersagt, soweit nicht gesetzlich zwingend erlaubt (§§ 69d, 69e UrhG).
+          Die Bereitstellung erfolgt <strong>unentgeltlich und „wie besehen“</strong>. Ein bestimmter Funktionsumfang, eine bestimmte Verfügbarkeit, Fehlerfreiheit, Reaktionszeiten oder die
+          Fortführung des Projekts werden nicht geschuldet. Funktionen können jederzeit geändert, eingeschränkt oder eingestellt werden.
         </li>
+        <li>Der Betreiber bemüht sich, Wartungsarbeiten anzukündigen und Störungen zügig zu beheben, ist hierzu aber nicht verpflichtet.</li>
+      </ol>
+
+      <h2 id="termine">§ 6 Termine, Ausfälle und eigene Vorsorge</h2>
+      <ol>
+        <li>
+          Slotdove ist ein Hilfsmittel. <strong>Für die Organisation, Bestätigung, Durchführung und Absage von Terminen ist ausschließlich der jeweilige Betrieb verantwortlich</strong> – auch gegenüber
+          seinen Kunden. Der Betreiber ist nicht Partei der Verträge zwischen Betrieben und deren Kunden.
+        </li>
+        <li>
+          Der Nutzer nimmt zur Kenntnis, dass es insbesondere zu folgenden Problemen kommen kann: Ausfall oder Nichterreichbarkeit der Website, fehlerhafte Anzeige freier Zeiten, Doppelbuchungen,
+          verlorene, verspätete oder falsch angezeigte Termine, nicht oder verspätet zugestellte E-Mails (Bestätigungen, Erinnerungen, Absagen), Fehler durch Zeitumstellungen oder Feiertage, Fehler
+          von KI-Vorschlägen sowie Datenverlust.
+        </li>
+        <li>
+          Der Nutzer verpflichtet sich daher, wichtige Termine und Kundendaten <strong>zusätzlich selbst festzuhalten</strong>, Buchungen bei Bedarf selbst gegenüber Kunden zu bestätigen und seine
+          Daten regelmäßig über die Exportfunktion zu sichern.
+        </li>
+      </ol>
+
+      <h2 id="pflichten">§ 7 Pflichten der Nutzer</h2>
+      <ol>
+        <li>Nutzer sind für alle Inhalte ihrer Buchungsseite (Texte, Preise, Bilder, Öffnungszeiten) und ihre Nachrichten selbst verantwortlich.</li>
+        <li>
+          Betriebe erfüllen ihre rechtlichen Pflichten gegenüber ihren Kunden selbst, insbesondere eigene Datenschutzinformationen, ggf. ein eigenes Impressum, Preisangaben, Storno- und
+          Widerrufsregelungen sowie berufsrechtliche Vorgaben.
+        </li>
+        <li>Es dürfen keine Gesundheitsdaten oder andere besondere Kategorien personenbezogener Daten (Art. 9 DSGVO) in Freitextfelder eingetragen werden, soweit dies nicht zwingend nötig und zulässig ist.</li>
+        <li>Betriebe informieren ihre Teammitglieder, für die sie Zugänge anlegen, über die Datenverarbeitung.</li>
+        <li>Nutzer melden erkannte Fehler, Sicherheitslücken und Missbrauch unverzüglich an {OPERATOR.email}.</li>
+      </ol>
+
+      <h2 id="inhalte">§ 8 Inhalte und Nutzungsrechte</h2>
+      <ol>
+        <li>Rechte an den Inhalten der Nutzer verbleiben bei den Nutzern. Der Nutzer räumt dem Betreiber das einfache, auf die Nutzungsdauer beschränkte Recht ein, diese Inhalte zu speichern und anzuzeigen, soweit dies für den Dienst nötig ist.</li>
+        <li>Der Nutzer versichert, die erforderlichen Rechte an hochgeladenen Inhalten zu besitzen (Urheber-, Marken- und Persönlichkeitsrechte).</li>
+        <li>Software, Design und Logo von Slotdove dürfen nur im Rahmen dieser Bedingungen genutzt werden. Automatisiertes Auslesen und Umgehen von Schutzmaßnahmen sind untersagt.</li>
       </ol>
 
       <h2 id="verboten">§ 9 Verbotene Nutzung</h2>
-      <p>Der Kunde darf den Dienst nicht nutzen, um</p>
+      <p>Untersagt ist insbesondere:</p>
       <ul>
-        <li>rechtswidrige Inhalte zu veröffentlichen oder rechtswidrige Leistungen anzubieten (z. B. Prostitution ohne Erlaubnis, verschreibungspflichtige Arzneimittel, Waffen, Glücksspiel ohne Lizenz);</li>
-        <li>beleidigende, diskriminierende, volksverhetzende, gewaltverherrlichende, pornografische oder jugendgefährdende Inhalte zu verbreiten;</li>
-        <li>Rechte Dritter zu verletzen (Urheber-, Marken-, Persönlichkeits- und Datenschutzrechte);</li>
-        <li>Spam, unerlaubte Werbung (§ 7 UWG), Phishing oder Schadsoftware zu verbreiten;</li>
-        <li>Fake-Buchungen, Scheinbewertungen oder irreführende Angaben zu erzeugen;</li>
-        <li>die Sicherheit oder Stabilität des Dienstes zu gefährden (z. B. Lasttests, Penetrationstests ohne schriftliche Erlaubnis, Umgehen von Ratenbegrenzungen, Zugriff auf fremde Konten);</li>
-        <li>den Dienst an Dritte weiterzuvermieten oder als eigenes Produkt weiterzuverkaufen.</li>
+        <li>das Anbieten rechtswidriger Leistungen oder das Veröffentlichen rechtswidriger, beleidigender, diskriminierender, gewaltverherrlichender oder pornografischer Inhalte;</li>
+        <li>die Verletzung von Rechten Dritter, Spam, unerlaubte Werbung (§ 7 UWG), Phishing oder Schadsoftware;</li>
+        <li>Fake-Buchungen, Täuschung oder irreführende Angaben;</li>
+        <li>Angriffe auf die Sicherheit oder Stabilität des Dienstes, Zugriffe auf fremde Konten und das Umgehen von Ratenbegrenzungen;</li>
+        <li>die Weitervermarktung des Dienstes an Dritte.</li>
       </ul>
 
       <h2 id="moderation">§ 10 Meldeverfahren, Moderation und Sperrung (DSA)</h2>
       <ol>
         <li>
-          Wir sind Anbieter eines Hostingdienstes im Sinne des Digital Services Act (Verordnung (EU) 2022/2065). Jede Person kann rechtswidrige Inhalte über unser <Link href="/melden">Meldeformular</Link>{' '}
-          melden (Art. 16 DSA). Wir bestätigen den Eingang, prüfen Meldungen zeitnah, sorgfältig, frei von Willkür und objektiv und teilen unsere Entscheidung mit.
+          Rechtswidrige Inhalte können jederzeit über das <Link href="/melden">Meldeformular</Link> gemeldet werden (Art. 16 DSA). Meldungen werden zeitnah, sorgfältig und objektiv geprüft.
         </li>
         <li>
-          Bei Anhaltspunkten für rechtswidrige Inhalte oder Verstöße gegen § 9 können wir – abgestuft und verhältnismäßig – Inhalte entfernen oder sperren, die Sichtbarkeit einschränken, die
-          Buchungsseite vorübergehend deaktivieren, Funktionen einschränken oder das Konto sperren. Bei der Wahl der Maßnahme berücksichtigen wir die Schwere, Häufigkeit und Folgen des Verstoßes sowie die
-          berechtigten Interessen aller Beteiligten und die Grundrechte, insbesondere die Meinungs- und Berufsfreiheit.
+          Bei Verstößen gegen Gesetze oder diese Bedingungen kann der Betreiber verhältnismäßig Inhalte entfernen, Funktionen einschränken, Buchungsseiten deaktivieren oder Konten sperren. Betroffene
+          erhalten eine Begründung (Art. 17 DSA) und können innerhalb von sechs Monaten widersprechen.
         </li>
-        <li>
-          Über jede Beschränkung erhält der betroffene Kunde eine klare und spezifische Begründung (Art. 17 DSA), mit Angabe der Maßnahme, der Tatsachen, ob automatisierte Mittel eingesetzt wurden, der
-          Rechtsgrundlage bzw. der verletzten Vertragsbestimmung und der Rechtsbehelfe. Der Kunde kann innerhalb von sechs Monaten Einwände erheben; wir prüfen diese durch eine andere Person als die, die
-          entschieden hat.
-        </li>
-        <li>
-          Wer offensichtlich rechtswidrige Inhalte häufig bereitstellt oder offensichtlich unbegründete Meldungen häufig einreicht, kann nach vorheriger Warnung für einen angemessenen Zeitraum gesperrt
-          werden (Art. 23 DSA). Bei Verdacht auf Straftaten, die eine Gefahr für Leben oder Sicherheit von Personen darstellen, informieren wir die zuständigen Behörden (Art. 18 DSA).
-        </li>
-        <li>Wir setzen automatische Filter nur unterstützend ein (z. B. Spam- und Beleidigungserkennung im Chat); Sperrungen von Konten entscheidet ein Mensch.</li>
-        <li>Der Rechtsweg zu den ordentlichen Gerichten bleibt unberührt.</li>
+        <li>Automatische Filter (z. B. gegen Spam) werden nur unterstützend eingesetzt; über Kontosperrungen entscheidet ein Mensch.</li>
       </ol>
 
       <h2 id="ki">§ 11 KI-Funktionen</h2>
-      <ol>
-        <li>
-          Der Dienst enthält optionale KI-Funktionen. KI-Ergebnisse können fehlerhaft, unvollständig oder unpassend sein. Sie sind als Vorschlag gekennzeichnet und vom Kunden vor Verwendung zu prüfen.
-          Der Kunde bleibt für veröffentlichte Inhalte verantwortlich.
-        </li>
-        <li>
-          Der Kunde gibt in KI-Anfragen keine besonderen Kategorien personenbezogener Daten und keine Geschäftsgeheimnisse Dritter ein. Der Kunde ist dafür verantwortlich, seine Endkunden gemäß Art. 50
-          KI-Verordnung zu informieren, wenn er KI-erzeugte Inhalte an sie weitergibt, soweit eine solche Pflicht besteht.
-        </li>
-      </ol>
-
-      <h2 id="unterstuetzung">§ 11a Freiwillige Unterstützung</h2>
-      <ol>
-        <li>
-          Nutzer und Dritte können Slotdove freiwillig mit einem Geldbetrag unterstützen (z. B. über PayPal). Die Unterstützung erfolgt <strong>ohne Gegenleistung</strong>; sie begründet keinen
-          Anspruch auf Leistungen, Funktionen, Verfügbarkeit oder bevorzugte Behandlung und hat keinen Einfluss auf die Nutzung.
-        </li>
-        <li>Es handelt sich nicht um eine Spende im steuerlichen Sinn. Eine Zuwendungsbestätigung (Spendenquittung) wird nicht ausgestellt.</li>
-        <li>Die Mittel werden ausschließlich für die laufenden Betriebskosten von Slotdove verwendet.</li>
-        <li>Versehentlich oder doppelt gezahlte Beträge erstatten wir auf Anfrage innerhalb von 14 Tagen nach Zahlung.</li>
-      </ol>
-
-      <h2 id="verfuegbarkeit">§ 12 Verfügbarkeit, Wartung, Änderungen</h2>
-      <ol>
-        <li>
-          Wir bemühen uns um eine Verfügbarkeit von 99 % im Monatsmittel. Hiervon ausgenommen sind angekündigte Wartungsarbeiten, Störungen außerhalb unseres Einflussbereichs (z. B. höhere Gewalt,
-          Ausfälle von Internet- und Cloud-Anbietern, Angriffe Dritter) sowie Beta-Funktionen.
-        </li>
-        <li>Wartungsarbeiten führen wir möglichst außerhalb üblicher Geschäftszeiten durch und kündigen größere Arbeiten im Dashboard an.</li>
-        <li>
-          Wir dürfen den Dienst weiterentwickeln und ändern, soweit dies für den Kunden zumutbar ist und der wesentliche Leistungsumfang erhalten bleibt (z. B. Sicherheitsupdates, Anpassung an Rechtslage,
-          neue Funktionen). Wesentliche Einschränkungen kündigen wir mindestens sechs Wochen vorher an; der Kunde kann in diesem Fall außerordentlich kündigen.
-        </li>
-      </ol>
-
-      <h2 id="datenschutz">§ 13 Datenschutz und Auftragsverarbeitung</h2>
-      <ol>
-        <li>
-          Soweit wir personenbezogene Daten der Endkunden und Beschäftigten des Kunden verarbeiten, handeln wir als Auftragsverarbeiter. Es gilt der <Link href="/avv">Auftragsverarbeitungsvertrag (AVV)</Link>,
-          der mit Annahme dieser AGB geschlossen wird und Vorrang vor diesen AGB hat, soweit er Datenschutzfragen regelt.
-        </li>
-        <li>Im Übrigen gilt unsere <Link href="/datenschutz">Datenschutzerklärung</Link>.</li>
-      </ol>
-
-      <h2 id="sicherheit">§ 14 Zugangsdaten und Sicherheit</h2>
-      <ol>
-        <li>
-          Zugangsdaten sind geheim zu halten und dürfen nicht an Unbefugte weitergegeben werden. Jede Person erhält einen eigenen Zugang; geteilte Konten sind nicht erlaubt. Passwörter müssen mindestens
-          12 Zeichen lang sein.
-        </li>
-        <li>Besteht der Verdacht, dass Unbefugte Kenntnis von Zugangsdaten erlangt haben, ändert der Kunde das Passwort unverzüglich und informiert uns.</li>
-        <li>Wir dürfen Zugänge vorübergehend sperren, wenn konkrete Anhaltspunkte für einen Missbrauch oder eine Kompromittierung bestehen; wir informieren den Kunden unverzüglich.</li>
-      </ol>
-
-      <h2 id="haftung">§ 15 Haftung</h2>
-      <ol>
-        <li>
-          Wir haften unbeschränkt bei Vorsatz und grober Fahrlässigkeit, bei Verletzung von Leben, Körper oder Gesundheit, nach dem Produkthaftungsgesetz sowie im Umfang einer übernommenen Garantie.
-        </li>
-        <li>
-          Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten (Kardinalpflichten – Pflichten, deren Erfüllung die ordnungsgemäße Durchführung des Vertrags überhaupt erst ermöglicht und auf
-          deren Einhaltung der Kunde regelmäßig vertrauen darf) ist die Haftung auf den vertragstypischen, vorhersehbaren Schaden begrenzt, höchstens jedoch auf die vom Kunden in den zwölf Monaten vor dem
-          Schadensereignis gezahlte Vergütung.
-        </li>
-        <li>Im Übrigen ist die Haftung für leichte Fahrlässigkeit ausgeschlossen.</li>
-        <li>
-          Die verschuldensunabhängige Haftung für bei Vertragsschluss vorhandene Mängel (§ 536a Abs. 1 Alt. 1 BGB) ist ausgeschlossen. Für Datenverlust haften wir nur in Höhe des Aufwands, der bei
-          ordnungsgemäßer Datensicherung durch den Kunden (§ 6 Abs. 5) zur Wiederherstellung erforderlich gewesen wäre.
-        </li>
-        <li>Wir haften nicht für entgangene Umsätze aus nicht wahrgenommenen Terminen von Endkunden oder für Inhalte und Handlungen des Kunden oder seiner Endkunden.</li>
-        <li>Die vorstehenden Beschränkungen gelten auch zugunsten unserer gesetzlichen Vertreter, Mitarbeiter und Erfüllungsgehilfen. Die Haftung nach Art. 82 DSGVO bleibt unberührt.</li>
-      </ol>
-
-      <h2 id="freistellung">§ 16 Freistellung</h2>
       <p>
-        Der Kunde stellt uns von allen Ansprüchen Dritter (einschließlich Behörden und Endkunden) frei, die auf einer schuldhaften Verletzung dieser AGB oder geltenden Rechts durch den Kunden,
-        insbesondere durch von ihm eingestellte Inhalte, beruhen, einschließlich der angemessenen Kosten der Rechtsverteidigung. Wir informieren den Kunden unverzüglich über geltend gemachte Ansprüche
-        und geben ihm Gelegenheit zur Stellungnahme.
+        KI-Ergebnisse (z. B. Textvorschläge, Antworten der Assistentin) können falsch oder unvollständig sein. Sie sind als KI-Vorschlag gekennzeichnet und vor der Verwendung zu prüfen. Für
+        veröffentlichte Inhalte bleibt der Nutzer verantwortlich. In KI-Anfragen dürfen keine Gesundheitsdaten eingegeben werden.
       </p>
 
-      <h2 id="laufzeit">§ 17 Laufzeit und Kündigung</h2>
-      <ol>
-        <li>Während der Startphase kann der Kunde den Vertrag jederzeit ohne Frist beenden, insbesondere durch Löschung seines Kontos im Dashboard.</li>
-        <li>
-          Monatliche Tarife laufen auf unbestimmte Zeit und können von beiden Seiten mit einer Frist von 14 Tagen zum Ende des jeweiligen Abrechnungsmonats gekündigt werden. Jahrestarife verlängern sich
-          nach Ablauf auf unbestimmte Zeit und sind dann mit einer Frist von einem Monat kündbar.
-        </li>
-        <li>
-          Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt. Ein wichtiger Grund liegt für uns insbesondere vor bei erheblichen oder wiederholten Verstößen gegen § 9, einem
-          Zahlungsverzug von mehr als zwei Monatsbeträgen oder bei Verwendung des Dienstes für Straftaten.
-        </li>
-        <li>Die Kündigung ist in Textform (z. B. E-Mail) oder über die Kündigungsfunktion im Konto möglich.</li>
-      </ol>
-
-      <h2 id="datenende">§ 18 Datenexport und Löschung bei Vertragsende</h2>
-      <ol>
-        <li>Der Kunde kann seine Daten jederzeit über die Exportfunktionen (CSV/JSON) herunterladen.</li>
-        <li>
-          Nach Vertragsende stellen wir den Export noch 30 Tage zur Verfügung und löschen die Daten danach, soweit keine gesetzlichen Aufbewahrungspflichten bestehen. Backups werden im regulären Zyklus
-          überschrieben.
-        </li>
-      </ol>
-
-      <h2 id="aenderung">§ 19 Änderungen der AGB</h2>
+      <h2 id="datenschutz">§ 12 Datenschutz und Auftragsverarbeitung</h2>
       <p>
-        Wir können diese AGB mit Wirkung für die Zukunft ändern, wenn ein triftiger Grund besteht (z. B. Änderung der Rechtslage oder Rechtsprechung, neue Funktionen, Schließen von Regelungslücken) und
-        der Kunde nicht unangemessen benachteiligt wird. Wir teilen Änderungen mindestens sechs Wochen vor Inkrafttreten in Textform mit. Widerspricht der Kunde nicht innerhalb dieser Frist, gelten die
-        Änderungen als angenommen; auf diese Folge, das Widerspruchsrecht und die Frist weisen wir in der Mitteilung gesondert hin. Im Fall des Widerspruchs können beide Seiten zum Inkrafttreten
-        kündigen. Änderungen der Hauptleistungspflichten und der Preise erfolgen nicht über diese Klausel.
+        Soweit der Betreiber Daten der Kunden und Teammitglieder eines Betriebs verarbeitet, handelt er als Auftragsverarbeiter nach dem <Link href="/avv">Auftragsverarbeitungsvertrag</Link>, der mit
+        der Unterzeichnung geschlossen wird. Im Übrigen gilt die <Link href="/datenschutz">Datenschutzerklärung</Link>.
       </p>
 
-      <h2 id="schluss">§ 20 Schlussbestimmungen</h2>
+      <h2 id="sicherheit">§ 13 Zugangsdaten und Sicherheit</h2>
       <ol>
-        <li>Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts (CISG).</li>
+        <li>Zugangsdaten sind geheim zu halten. Jede Person nutzt einen eigenen Zugang. Passwörter müssen mindestens 12 Zeichen lang sein.</li>
+        <li>Bei Verdacht auf Missbrauch ist das Passwort sofort zu ändern und der Betreiber zu informieren. Der Betreiber darf Zugänge bei konkretem Missbrauchsverdacht vorübergehend sperren.</li>
+      </ol>
+
+      <h2 id="haftung">§ 14 Haftung</h2>
+      <ol>
         <li>
-          Ausschließlicher Gerichtsstand für alle Streitigkeiten aus diesem Vertrag ist, soweit gesetzlich zulässig, der Sitz des Anbieters (<Ph>ORT</Ph>), sofern der Kunde Kaufmann, juristische Person
-          des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen ist.
+          Da Slotdove unentgeltlich bereitgestellt wird, haftet der Betreiber – entsprechend den gesetzlichen Wertungen für unentgeltliche Leistungen (§§ 521, 599 BGB) – <strong>nur für Vorsatz und
+          grobe Fahrlässigkeit</strong>.
         </li>
-        <li>Wir nehmen nicht an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teil (§ 36 VSBG).</li>
-        <li>Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt. Anstelle der unwirksamen Bestimmung gelten die gesetzlichen Vorschriften (§ 306 BGB).</li>
-        <li>Vertragssprache ist Deutsch. Übersetzungen dienen nur der Information.</li>
+        <li>
+          Insbesondere besteht – vorbehaltlich Abs. 3 – <strong>keine Haftung</strong> für: ausgefallene, verspätete, doppelte, falsch angezeigte oder verlorene Termine; nicht erschienene Kunden;
+          nicht oder verspätet zugestellte E-Mails; entgangene Umsätze oder Gewinne; Folgeschäden; Ausfallzeiten und Störungen; Fehler von KI-Funktionen; Inhalte und Handlungen anderer Nutzer oder
+          deren Kunden; Datenverlust, soweit er durch die nach § 6 Abs. 3 geschuldete eigene Datensicherung vermeidbar gewesen wäre.
+        </li>
+        <li>
+          Unberührt bleiben die Haftung für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit, für arglistig verschwiegene Mängel, nach dem Produkthaftungsgesetz sowie die Haftung
+          nach Art. 82 DSGVO. Diese Haftung kann gesetzlich nicht ausgeschlossen werden.
+        </li>
+        <li>Die vorstehenden Regelungen gelten auch zugunsten von Personen, die der Betreiber zur Erbringung des Dienstes einsetzt.</li>
+      </ol>
+
+      <h2 id="freistellung">§ 15 Freistellung</h2>
+      <p>
+        Der Nutzer stellt den Betreiber von Ansprüchen Dritter (insbesondere seiner Kunden und von Behörden) frei, die auf einer schuldhaften Verletzung dieser Bedingungen oder geltenden Rechts durch den
+        Nutzer beruhen, einschließlich angemessener Kosten der Rechtsverteidigung.
+      </p>
+
+      <h2 id="ende">§ 16 Laufzeit, Beendigung und Ende der Testphase</h2>
+      <ol>
+        <li>Der Nutzer kann den Vertrag jederzeit ohne Frist beenden, insbesondere durch Löschung seines Kontos im Dashboard.</li>
+        <li>
+          Der Betreiber kann den Vertrag oder das gesamte Projekt mit einer Frist von vier Wochen beenden; aus wichtigem Grund (z. B. schwere Verstöße, Sicherheitsrisiken) auch fristlos.
+        </li>
+        <li>
+          Die Testphase endet voraussichtlich am {until}. Der Betreiber informiert die Nutzer mindestens vier Wochen vorher, ob und wie es weitergeht. Bis zum Ende können alle Daten exportiert werden;
+          danach werden sie nach Ankündigung gelöscht, frühestens 30 Tage nach Ende.
+        </li>
+      </ol>
+
+      <h2 id="aenderung">§ 17 Änderungen dieser Bedingungen</h2>
+      <p>
+        Änderungen werden mindestens vier Wochen vor Inkrafttreten im Dashboard oder per E-Mail mitgeteilt. Wesentliche Änderungen müssen erneut ausdrücklich bestätigt und unterzeichnet werden; bis
+        dahin kann das Dashboard nicht weiter genutzt werden. Der Nutzer kann stattdessen sein Konto löschen.
+      </p>
+
+      <h2 id="schluss">§ 18 Schlussbestimmungen</h2>
+      <ol>
+        <li>Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.</li>
+        <li>Ist der Nutzer Kaufmann, juristische Person des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen, ist Gerichtsstand – soweit zulässig – Ratzeburg.</li>
+        <li>Der Betreiber nimmt nicht an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teil (§ 36 VSBG).</li>
+        <li>Sind einzelne Bestimmungen unwirksam, bleibt der Vertrag im Übrigen wirksam; an die Stelle tritt die gesetzliche Regelung.</li>
       </ol>
     </LegalPage>
   );

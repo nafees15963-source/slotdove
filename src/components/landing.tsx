@@ -35,7 +35,8 @@ export async function Landing() {
         ['Muss ich Mitarbeiter anlegen?', 'Nein. Du kannst sofort Termine eintragen und Mitarbeiter später zuordnen – oder ganz alleine arbeiten.'],
         ['Wie funktioniert die KI ohne Cloud?', 'Die Slotdove KI läuft direkt in deinem Browser. Sie versteht Termine in normaler Sprache, beantwortet Fragen zu deinem Kalender und gibt Tipps – deine Daten gehen an keinen KI-Anbieter.'],
         ['Was kostet Slotdove?', `Vom ${from} bis ${until} nichts – alle Funktionen sind kostenlos. Es gibt kein Abo, du gibst keine Zahlungsdaten an und nichts verlängert sich automatisch.`],
-        ['Was passiert nach der Gratis-Phase?', `Ab ${after} gelten voraussichtlich die Tarife unten (ab 5 € im Monat). Wir informieren dich rechtzeitig vorher. Du entscheidest dann selbst, ob du weitermachst – ohne Zustimmung entstehen keine Kosten.`],
+        ['Was passiert nach der Testphase?', `Das entscheiden wir anhand des Interesses. Falls Slotdove ab ${after} weitergeführt wird, informieren wir dich mindestens vier Wochen vorher. Kosten entstehen nur, wenn du dann ausdrücklich einen neuen Vertrag abschließt – sonst kannst du deine Daten exportieren, und wir löschen sie.`],
+        ['Wer steckt hinter Slotdove?', '„Slotdove“ ist der Projektname eines privaten, nicht-kommerziellen Testprojekts – kein Unternehmen. Es wird kein Geld verlangt. Die Nutzung erfolgt ohne Gewähr; Details stehen in den Nutzungsbedingungen.'],
         ['Zahle ich Provision pro Buchung?', 'Nein. Keine Provision, keine versteckten Kosten.'],
         ['Wie bekomme ich Zugang?', 'Melde dich unten kostenlos vor. Wir prüfen jede Anmeldung persönlich und schicken dir dann einen persönlichen Registrierungslink.'],
         ['Ist das DSGVO-konform?', 'Daten liegen in einer EU-Datenbank (Frankfurt). Kunden können ihre Daten exportieren oder anonymisieren lassen.'],
@@ -46,7 +47,8 @@ export async function Landing() {
         ['Do I have to add staff?', 'No. Add appointments right away and assign staff later – or work alone.'],
         ['How does the AI work without the cloud?', 'Slotdove AI runs in your browser. It understands appointments in plain language and answers questions – your data never goes to an AI vendor.'],
         ['What does Slotdove cost?', `Nothing from ${from} to ${until} – every feature is free. No subscription, no payment details, nothing renews automatically.`],
-        ['What happens after the free phase?', `From ${after} the plans below will most likely apply (from €5/month). We will tell you in advance; nothing is charged without your consent.`],
+        ['What happens after the test phase?', `We decide based on interest. If Slotdove continues from ${after}, we will tell you at least four weeks in advance. Costs only arise if you explicitly sign a new contract.`],
+        ['Who is behind Slotdove?', '“Slotdove” is the name of a private, non-commercial test project – not a company. No money is requested. Provided without warranty.'],
         ['Do I pay commission per booking?', 'No commission, no hidden fees.'],
         ['How do I get access?', 'Pre-register below. We review every request personally and send you a personal sign-up link.'],
         ['Is it GDPR compliant?', 'Data is stored in an EU database (Frankfurt). Customers can export or anonymise their data.'],
@@ -62,7 +64,7 @@ export async function Landing() {
           <div className="market-container l-hero-grid">
             <div className="l-hero-copy">
               <span className="l-pill">
-                <Sparkles size={14} /> {de ? `Ab ${from} komplett kostenlos · Voranmeldung offen` : `Completely free from ${from} · pre-registration open`}
+                <Sparkles size={14} /> {de ? `Kostenloses Testprojekt ab ${from} · Voranmeldung offen` : `Free test project from ${from} · pre-registration open`}
               </span>
               <h1>
                 {de ? 'Termine planen.' : 'Scheduling,'}
@@ -242,8 +244,8 @@ export async function Landing() {
             <h2>{de ? `${release.free_from.slice(0, 4)}: alles kostenlos.` : `${release.free_from.slice(0, 4)}: everything free.`}</h2>
             <p>
               {de
-                ? `Vom ${from} bis ${until} nutzt du alle Funktionen für 0 € – ohne Abo, ohne Zahlungsdaten, ohne automatische Verlängerung. Danach gelten voraussichtlich diese Tarife. Wir sagen dir rechtzeitig Bescheid, und du entscheidest selbst.`
-                : `From ${from} to ${until} every feature is €0 – no subscription, no payment details, no auto-renewal. Afterwards these plans will most likely apply. We will tell you in advance and you decide.`}
+                ? `Slotdove ist ein privates, nicht-kommerzielles Testprojekt. Vom ${from} bis ${until} nutzt du alle Funktionen für 0 € – es wird kein Geld verlangt, es gibt kein Abo und keine Zahlungsdaten. Wir wollen ein Jahr lang herausfinden, ob Interesse besteht. Die Preise unten sind nur unverbindliche Beispiele für eine mögliche spätere Weiterführung – das ginge nur mit einem neuen Vertrag und deiner ausdrücklichen Zustimmung.`
+                : `Slotdove is a private, non-commercial test project. From ${from} to ${until} every feature is €0 – no money is requested, no subscription, no payment details. The prices below are non-binding examples for a possible later continuation, which would require a new contract and your explicit consent.`}
             </p>
           </div>
           <div className="free-banner">
@@ -256,7 +258,7 @@ export async function Landing() {
           <div className="plan-grid">
             {plans.map((p) => (
               <div key={p.id} className={`plan-card ${p.hot ? 'featured' : ''}`}>
-                <span className="badge">{de ? `voraussichtlich ab ${after}` : `expected from ${after}`}</span>
+                <span className="badge">{de ? `unverbindliches Beispiel ab ${after}` : `non-binding example from ${after}`}</span>
                 <h3>{PLAN_DEFAULTS[p.id].name}</h3>
                 <div className="plan-price">
                   <strong>{PLAN_DEFAULTS[p.id].monthlyPriceCents / 100} €</strong>

@@ -929,3 +929,97 @@ export function ReleaseDesk() {
     </div>
   );
 }
+
+type SignatureRow = { user_id: string; version: string; signer_name: string; accepted_at: string; ip_hash: string | null; user_agent: string; email: string; businesses: string[] };
+/** Electronic signatures of the terms, plus accounts that have not signed the current version. */
+export function SignaturesDesk({ onUser }: { onUser: (id: string) => void }) {
+  const [d] = useView<{ version: string; rows: SignatureRow[]; missing: { user_id: string; email: string; businesses: string[] }[] }>('view=signatures');
+  const [open, setOpen] = useState<SignatureRow | null>(null);
+  if (!d) return <div className="skeleton" style={{ height: 200 }} />;
+  return (
+    <div className="stack">
+      <section className="panel">
+        <div className="panel-head spread">
+          <h2 className="panel-title">
+            Unterschriften ({d.rows.length}) · aktuelle Version {d.version}
+          </h2>
+          <a className="btn btn-outline btn-sm" href={`${T}?view=signatures&csv=1`}>
+            <Download size={13} /> CSV
+          </a>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Unterschrift (Name)</th>
+                <th>E-Mail</th>
+                <th>Betrieb</th>
+                <th>Version</th>
+                <th>Zeitpunkt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.rows.map((r, i) => (
+                <tr key={i} onClick={() => setOpen(r)} style={{ cursor: 'pointer' }}>
+                  <td>
+                    <span className="sign-mini">{r.signer_name}</span>
+                  </td>
+                  <td>{r.email}</td>
+                  <td>{r.businesses.join(', ') || '—'}</td>
+                  <td>
+                    <span className={`badge ${r.version === d.version ? 'badge-green' : ''}`}>{r.version}</span>
+                  </td>
+                  <td>{fmt(r.accepted_at)}</td>
+                </tr>
+              ))}
+              {!d.rows.length && (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    Noch keine Unterschriften.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="panel">
+        <div className="panel-head">
+          <h2 className="panel-title">Noch nicht unterschrieben ({d.missing.length})</h2>
+        </div>
+        <div className="panel-body feed">
+          {d.missing.map((m) => (
+            <button key={m.user_id} className="search-hit" onClick={() => onUser(m.user_id)}>
+              {m.email} {m.businesses.length ? `· ${m.businesses.join(', ')}` : ''}
+            </button>
+          ))}
+          {!d.missing.length && <p className="muted">Alle Konten haben die aktuelle Version unterschrieben.</p>}
+          <small className="muted">Diese Konten können das Dashboard erst nach der Unterschrift nutzen.</small>
+        </div>
+      </section>
+      <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)} title="Nachweis der Unterschrift">
+        {open && (
+          <div className="stack">
+            <div className="sign-preview">{open.signer_name}</div>
+            <div className="notice" style={{ fontSize: 13 }}>
+              E-Mail: {open.email}
+              <br />
+              Betrieb: {open.businesses.join(', ') || '—'}
+              <br />
+              Zeitpunkt: {fmt(open.accepted_at)}
+              <br />
+              Version: {open.version} (Nutzungsbedingungen, Datenschutzerklärung, AVV)
+              <br />
+              Netzwerk-Hash: {open.ip_hash || '—'}
+              <br />
+              Browser: {open.user_agent || '—'}
+            </div>
+            <Button variant="outline" onClick={() => (onUser(open.user_id), setOpen(null))}>
+              Benutzer öffnen
+            </Button>
+          </div>
+        )}
+      </Dialog>
+    </div>
+  );
+}

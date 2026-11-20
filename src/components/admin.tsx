@@ -37,13 +37,14 @@ import {
   Users,
   X,
   BarChart3,
+  FileSignature,
   Check,
   FileLock2,
   Power,
   ShieldAlert,
 } from 'lucide-react';
 import { Brand } from './brand';
-import { BlocklistDesk, CreateUserButton, DsrDesk, GlobalSearch, PlatformDesk, ReleaseDesk, ReportsDesk, StatsDesk, UserSecurity } from './admin-trust';
+import { BlocklistDesk, CreateUserButton, DsrDesk, GlobalSearch, PlatformDesk, ReleaseDesk, ReportsDesk, SignaturesDesk, StatsDesk, UserSecurity } from './admin-trust';
 import { Preferences } from './preferences';
 import { Button } from './ui/button';
 import { Dialog } from './ui/dialog';
@@ -99,7 +100,7 @@ type AdminData = {
   tickets: AdminTicket[];
 };
 type AdminTicket = { id: string; case_number: string; business_id: string | null; user_id: string | null; contact_email: string; subject: string; category: string; priority: string; status: TicketStatus; assigned_to: string | null; last_reply_by: string; created_at: string; updated_at: string };
-type Tab = 'overview' | 'search' | 'support' | 'reports' | 'gdpr' | 'blocklist' | 'stats' | 'platform' | 'waitlist' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
+type Tab = 'overview' | 'signatures' | 'search' | 'support' | 'reports' | 'gdpr' | 'blocklist' | 'stats' | 'platform' | 'waitlist' | 'email' | 'businesses' | 'users' | 'moderation' | 'features' | 'announcements' | 'logs';
 const bannedNow = (until: string | null | undefined) => !!until && Date.parse(until) > Date.now();
 const inPast = (date: string | null | undefined) => !!date && Date.parse(date) <= Date.now();
 const fmt = (iso: string | null | undefined, locale: string) =>
@@ -187,6 +188,7 @@ function AdminConsole() {
     ['support', LifeBuoy, de ? 'Support-Panel' : 'Support desk', data?.tickets.filter((t) => !['resolved', 'closed'].includes(t.status) && t.last_reply_by === 'user').length || undefined],
     ['moderation', MessageCircle, de ? 'Chats & Meldungen' : 'Chats & reports', openReports.length || undefined, de ? 'Sicherheit & Recht' : 'Trust & legal'],
     ['reports', Flag, de ? 'Meldungen (DSA)' : 'Reports (DSA)'],
+    ['signatures', FileSignature, de ? 'Unterschriften' : 'Signatures'],
     ['gdpr', FileLock2, de ? 'DSGVO-Anfragen' : 'GDPR requests'],
     ['blocklist', ShieldAlert, de ? 'Sperrliste' : 'Blocklist'],
     ['platform', Power, de ? 'Plattform & Release' : 'Platform & release', undefined, 'System'],
@@ -355,6 +357,7 @@ function AdminConsole() {
         {tab === 'stats' && <StatsDesk />}
         {tab === 'reports' && <ReportsDesk nameOf={nameOf} />}
         {tab === 'gdpr' && <DsrDesk />}
+        {tab === 'signatures' && <SignaturesDesk onUser={setUser} />}
         {tab === 'blocklist' && <BlocklistDesk />}
         {tab === 'platform' && (
           <>

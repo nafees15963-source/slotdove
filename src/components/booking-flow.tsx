@@ -524,6 +524,10 @@ export function BookingFlow({ slug }: { slug: string }) {
           </div>
           <footer className="bk-foot">
             Powered by <Link href="/">Slotdove</Link> · <Link href="/datenschutz">{t.privacy}</Link>
+            <br />
+            {dl
+              ? 'Für Termine und Leistungen ist allein der jeweilige Betrieb verantwortlich. Slotdove ist ein kostenloses, privates Testprojekt und wird ohne Gewähr bereitgestellt.'
+              : 'The business alone is responsible for appointments and services. Slotdove is a free, private test project provided without warranty.'}
           </footer>
         </main>
       )}
