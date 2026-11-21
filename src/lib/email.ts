@@ -66,7 +66,8 @@ export function normalizeFrom(raw: string | undefined) {
 }
 /** Which provider sends: Brevo if BREVO_API_KEY is set (free, works with a single verified
  * sender address, no own domain needed), otherwise Resend (needs a verified domain). */
-export function emailProvider(): 'gmail' | 'brevo' | 'resend' | null {
+export function emailProvider(): 'script' | 'gmail' | 'brevo' | 'resend' | null {
+  if (process.env.GMAIL_SCRIPT_URL?.trim().startsWith('https://script.google.com/') && process.env.GMAIL_SCRIPT_SECRET?.trim()) return 'script';
   if (process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim()) return 'gmail';
   if (process.env.BREVO_API_KEY?.trim()) return 'brevo';
   if (process.env.RESEND_API_KEY?.trim()) return 'resend';
@@ -75,6 +76,7 @@ export function emailProvider(): 'gmail' | 'brevo' | 'resend' | null {
 /** Sender: EMAIL_FROM, or for Gmail simply "Slotdove <GMAIL_USER>". */
 function senderAddress() {
   const configured = normalizeFrom(process.env.EMAIL_FROM);
+  if (emailProvider() === 'script') return configured || 'Slotdove <gmail>';
   if (emailProvider() !== 'gmail') return configured;
   const user = process.env.GMAIL_USER!.trim().toLowerCase();
   // Gmail only sends as the logged-in address; keep a custom display name if one was set.
@@ -110,6 +112,26 @@ export async function sendEmail(input: {
   const provider = emailProvider(),
     from = senderAddress();
   if (!provider || !from) return { state: 'unavailable' as const };
+  if (provider === 'script') {
+    // Google Apps Script web app in the project's Gmail account (see docs/emails/apps-script.gs).
+    const response = await fetch(process.env.GMAIL_SCRIPT_URL!.trim(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        secret: process.env.GMAIL_SCRIPT_SECRET!.trim(),
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        name: from.match(/^(.*) <.+>$/)?.[1] || 'Slotdove',
+        key: input.idempotencyKey.slice(0, 200),
+      }),
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20000),
+    });
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; id?: string } | null;
+    if (!response.ok || !result?.ok) throw new Error(`EMAIL_PROVIDER_SCRIPT: ${redact(result?.error || `HTTP ${response.status} – Script-URL oder Freigabe prüfen`)}`);
+    return { state: 'accepted' as const, id: String(result.id || input.idempotencyKey) };
+  }
   if (provider === 'gmail') {
     if (/[\r\n]/.test(input.to + input.subject)) throw new Error('EMAIL_INVALID_HEADER');
     try {

@@ -1690,7 +1690,7 @@ function EmailStatus({ action }: { action: ActionFn }) {
   }, [load]);
   if (!s) return <div className="skeleton-grid">{Array.from({ length: 3 }, (_, i) => <div className="skeleton" key={i} />)}</div>;
   const checks: [boolean, string, string][] = [
-    [s.resend_key, de ? 'E-Mail-Versand (GMAIL_USER + GMAIL_APP_PASSWORD, oder Brevo/Resend)' : 'Resend key (RESEND_API_KEY)', de ? 'In Vercel → Settings → Environment Variables eintragen.' : 'Add in Vercel → Settings → Environment Variables.'],
+    [s.resend_key, de ? 'E-Mail-Versand (GMAIL_SCRIPT_URL + GMAIL_SCRIPT_SECRET, oder Gmail/Brevo/Resend)' : 'Resend key (RESEND_API_KEY)', de ? 'In Vercel → Settings → Environment Variables eintragen.' : 'Add in Vercel → Settings → Environment Variables.'],
     [
       !!s.email_from,
       `${de ? 'Absender (EMAIL_FROM)' : 'Sender (EMAIL_FROM)'}${s.email_from ? `: ${s.email_from}` : s.email_from_raw ? ` – ${de ? 'ungültig' : 'invalid'}: „${s.email_from_raw}“` : ''}`,

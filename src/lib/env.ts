@@ -17,6 +17,8 @@ export function checkEnv(): Check[] {
     { key: 'SUPABASE_SECRET_KEY', ok: looks.secret(v('SUPABASE_SECRET_KEY')), required: true, hint: 'sb_secret_… – nur auf dem Server, niemals mit NEXT_PUBLIC_' },
     { key: 'NEXT_PUBLIC_SITE_URL', ok: looks.site(v('NEXT_PUBLIC_SITE_URL')), required: false, hint: 'https://slotdove.vercel.app (für Links in E-Mails)' },
     { key: 'RESEND_API_KEY', ok: looks.resend(v('RESEND_API_KEY')), required: false, hint: 're_… für E-Mail-Versand' },
+    { key: 'GMAIL_SCRIPT_URL', ok: v('GMAIL_SCRIPT_URL').startsWith('https://script.google.com/'), required: false, hint: 'Web-App-URL aus Google Apps Script (…/exec) – Versand über Gmail ohne App-Passwort' },
+    { key: 'GMAIL_SCRIPT_SECRET', ok: v('GMAIL_SCRIPT_SECRET').length >= 24, required: false, hint: 'Geheimwort, identisch mit SECRET im Script (mind. 24 Zeichen)' },
     { key: 'GMAIL_USER', ok: /@/.test(v('GMAIL_USER')), required: false, hint: 'slotdove@gmail.com – Versand über Gmail (hat Vorrang)' },
     { key: 'GMAIL_APP_PASSWORD', ok: v('GMAIL_APP_PASSWORD').replace(/\s/g, '').length === 16, required: false, hint: '16-stelliges App-Passwort aus myaccount.google.com/apppasswords' },
     { key: 'BREVO_API_KEY', ok: !!v('BREVO_API_KEY'), required: false, hint: 'xkeysib-… (kostenlos, ohne eigene Domain) – hat Vorrang vor Resend' },

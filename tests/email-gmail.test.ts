@@ -24,3 +24,16 @@ it('gmail wins when user and app password are set, and sends as that address', a
 it('rejects header injection in recipient or subject', async () => {
   await expect(sendEmail({ to: 'a@example.invalid\r\nBcc: x@example.invalid', subject: 'Hi', html: 'x', idempotencyKey: 'k' })).rejects.toThrow('EMAIL_INVALID_HEADER');
 });
+it('apps script provider posts secret and mail, and fails loudly on rejection', async () => {
+  vi.stubEnv('GMAIL_SCRIPT_URL', 'https://script.google.com/macros/s/abc/exec');
+  vi.stubEnv('GMAIL_SCRIPT_SECRET', 'x'.repeat(30));
+  vi.stubEnv('EMAIL_FROM', '');
+  expect(emailProvider()).toBe('script');
+  const f = vi.fn().mockResolvedValueOnce(new Response('{"ok":true,"id":"k1"}')).mockResolvedValueOnce(new Response('{"ok":false,"error":"Falsches Geheimwort"}'));
+  vi.stubGlobal('fetch', f);
+  expect(await sendEmail({ to: 'nobody@example.invalid', subject: 'Hi', html: 'x', idempotencyKey: 'k' })).toEqual({ state: 'accepted', id: 'k1' });
+  const body = JSON.parse(f.mock.calls[0][1].body);
+  expect(body).toMatchObject({ to: 'nobody@example.invalid', name: 'Slotdove', key: 'k' });
+  await expect(sendEmail({ to: 'nobody@example.invalid', subject: 'Hi', html: 'x', idempotencyKey: 'k2' })).rejects.toThrow('Falsches Geheimwort');
+  vi.unstubAllGlobals();
+});
