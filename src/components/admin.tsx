@@ -1984,7 +1984,16 @@ function LeadDrawer({ lead, onClose, action, reload }: { lead: Lead; onClose: ()
                 const r = await run({ action: 'waitlist-approve', id: lead.id }, de ? 'Bestätigt' : 'Approved');
                 if (r?.url) {
                   setInvite(String(r.url));
-                  if (!r.emailed) toast.message(de ? 'E-Mail-Versand nicht eingerichtet – Link unten kopieren und selbst schicken.' : 'Email not configured – copy the link below.');
+                  if (!r.emailed) {
+                    const why = String(r.emailError || '');
+                    toast.message(
+                      why === 'DOMAIN_NOT_VERIFIED'
+                        ? de ? 'Resend blockiert: Ohne eigene, verifizierte Domain darf nur an deine eigene Adresse gesendet werden. Link unten kopieren und selbst schicken.' : 'Resend blocked: verify a domain first. Copy the link below.'
+                        : why === 'NOT_CONFIGURED'
+                          ? de ? 'E-Mail-Versand nicht eingerichtet – Link unten kopieren und selbst schicken.' : 'Email not configured – copy the link below.'
+                          : de ? `E-Mail fehlgeschlagen (${why}) – Link unten kopieren.` : `Email failed (${why}) – copy the link below.`,
+                    );
+                  }
                 }
               }}
             >

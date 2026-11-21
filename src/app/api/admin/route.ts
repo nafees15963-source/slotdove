@@ -533,6 +533,7 @@ export async function POST(request: Request) {
         const origin = process.env.NEXT_PUBLIC_SITE_URL?.startsWith('http') ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '') : new URL(request.url).origin;
         const url = `${origin}/signup#invite=${token}`;
         let emailed = false;
+        let emailError: string | null = emailConfigured() ? null : 'NOT_CONFIGURED';
         if (emailConfigured()) {
           const de = lead.locale !== 'en';
           const until = new Intl.DateTimeFormat(de ? 'de' : 'en', { dateStyle: 'long' }).format(new Date(expires));
@@ -547,11 +548,15 @@ export async function POST(request: Request) {
             }),
             to: lead.email,
             idempotencyKey: `wl-approve-${v.id}-${expires.slice(0, 13)}`,
-          }).catch(() => ({ state: 'failed' as const }));
+          }).catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : '';
+            emailError = /verify a domain|own email address/i.test(msg) ? 'DOMAIN_NOT_VERIFIED' : msg.slice(0, 120) || 'SEND_FAILED';
+            return { state: 'failed' as const };
+          });
           emailed = r.state === 'accepted';
         }
-        await audit('waitlist.approved', null, { id: v.id, emailed });
-        result = { ok: true, url, emailed };
+        await audit('waitlist.approved', null, { id: v.id, emailed, emailError });
+        result = { ok: true, url, emailed, emailError };
         break;
       }
       case 'waitlist-demo': {
