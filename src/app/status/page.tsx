@@ -19,7 +19,7 @@ async function load() {
 export default async function Page() {
   const { db, status } = await load();
   const level = !db ? 'down' : status.level || 'ok';
-  const email = !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+  const email = !!((process.env.RESEND_API_KEY || process.env.BREVO_API_KEY) && process.env.EMAIL_FROM);
   const label = { ok: 'Alle Systeme laufen', degraded: 'Eingeschränkter Betrieb', down: 'Störung' }[level];
   const rows: [string, boolean][] = [
     ['Website', true],

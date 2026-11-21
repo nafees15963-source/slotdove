@@ -63,8 +63,18 @@ export function normalizeFrom(raw: string | undefined) {
   const domain = value.match(/^(?:https?:\/\/)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)\/?$/i)?.[1];
   return domain ? `Slotdove <termine@${domain.toLowerCase()}>` : '';
 }
+/** Which provider sends: Brevo if BREVO_API_KEY is set (free, works with a single verified
+ * sender address, no own domain needed), otherwise Resend (needs a verified domain). */
+export function emailProvider(): 'brevo' | 'resend' | null {
+  if (process.env.BREVO_API_KEY?.trim()) return 'brevo';
+  if (process.env.RESEND_API_KEY?.trim()) return 'resend';
+  return null;
+}
 export function emailConfigured() {
-  return !!process.env.RESEND_API_KEY?.trim() && !!normalizeFrom(process.env.EMAIL_FROM);
+  return !!emailProvider() && !!normalizeFrom(process.env.EMAIL_FROM);
+}
+function redact(text: string) {
+  return text.replace(/(re_|xkeysib-)[A-Za-z0-9_-]+/g, '[key]').slice(0, 160);
 }
 export async function sendEmail(input: {
   to: string;
@@ -72,13 +82,34 @@ export async function sendEmail(input: {
   html: string;
   idempotencyKey: string;
 }) {
-  const key = process.env.RESEND_API_KEY?.trim(),
+  const provider = emailProvider(),
     from = normalizeFrom(process.env.EMAIL_FROM);
-  if (!key || !from) return { state: 'unavailable' as const };
+  if (!provider || !from) return { state: 'unavailable' as const };
+  if (provider === 'brevo') {
+    const match = from.match(/^(.*) <(.+)>$/);
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': process.env.BREVO_API_KEY!.trim(), 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { name: match?.[1] || 'Slotdove', email: match?.[2] || from },
+        to: [{ email: input.to }],
+        subject: input.subject,
+        htmlContent: input.html,
+        headers: { 'X-Slotdove-Key': input.idempotencyKey.slice(0, 200) },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) {
+      const reason = redact(await response.text().catch(() => ''));
+      throw new Error(`EMAIL_PROVIDER_${response.status}${reason ? `: ${reason}` : ''}`);
+    }
+    const result = await response.json().catch(() => ({}));
+    return { state: 'accepted' as const, id: String(result.messageId || '') };
+  }
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${key}`,
+      Authorization: `Bearer ${process.env.RESEND_API_KEY!.trim()}`,
       'Content-Type': 'application/json',
       'Idempotency-Key': input.idempotencyKey,
     },
@@ -86,8 +117,8 @@ export async function sendEmail(input: {
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) {
-    // Keep Resend's reason (e.g. unverified domain) for the admin console; never the key.
-    const reason = (await response.text().catch(() => '')).replace(/re_[A-Za-z0-9_]+/g, '[key]').slice(0, 160);
+    // Keep the provider's reason (e.g. unverified domain) for the admin console; never the key.
+    const reason = redact(await response.text().catch(() => ''));
     throw new Error(`EMAIL_PROVIDER_${response.status}${reason ? `: ${reason}` : ''}`);
   }
   const result = await response.json();

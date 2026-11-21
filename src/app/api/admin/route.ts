@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       await registerAppUrl(request);
       const { data: stats } = await db.rpc('email_queue_stats');
       return json({
-        resend_key: !!process.env.RESEND_API_KEY?.trim(),
+        resend_key: !!(process.env.RESEND_API_KEY?.trim() || process.env.BREVO_API_KEY?.trim()),
         email_from: normalizeFrom(process.env.EMAIL_FROM) || null,
         email_from_raw: process.env.EMAIL_FROM ? process.env.EMAIL_FROM.trim().slice(0, 120) : null,
         configured: emailConfigured(),
@@ -550,7 +550,7 @@ export async function POST(request: Request) {
             idempotencyKey: `wl-approve-${v.id}-${expires.slice(0, 13)}`,
           }).catch((e: unknown) => {
             const msg = e instanceof Error ? e.message : '';
-            emailError = /verify a domain|own email address/i.test(msg) ? 'DOMAIN_NOT_VERIFIED' : msg.slice(0, 120) || 'SEND_FAILED';
+            emailError = /verify a domain|own email address/i.test(msg) ? 'DOMAIN_NOT_VERIFIED' : /sender/i.test(msg) ? 'SENDER_NOT_VERIFIED' : msg.slice(0, 120) || 'SEND_FAILED';
             return { state: 'failed' as const };
           });
           emailed = r.state === 'accepted';

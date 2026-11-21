@@ -80,3 +80,16 @@ it('provider acceptance keeps its id and uses an idempotency key', async () => {
 it('escaping is complete for HTML attributes', () => {
   expect(escapeHtml('"\'<>')).toBe('&quot;&#39;&lt;&gt;');
 });
+it('brevo is used when its key is set and gets sender name and address', async () => {
+  vi.stubEnv('BREVO_API_KEY', 'test-placeholder');
+  vi.stubEnv('RESEND_API_KEY', '');
+  vi.stubEnv('EMAIL_FROM', 'Slotdove <test@example.invalid>');
+  const f = vi.fn().mockResolvedValue(new Response('{"messageId":"<m@x>"}', { status: 201 }));
+  vi.stubGlobal('fetch', f);
+  expect(await sendEmail({ to: 'nobody@example.invalid', subject: 'Test', html: 'x', idempotencyKey: 'k' })).toEqual({ state: 'accepted', id: '<m@x>' });
+  expect(f.mock.calls[0][0]).toBe('https://api.brevo.com/v3/smtp/email');
+  const body = JSON.parse(f.mock.calls[0][1].body);
+  expect(body.sender).toEqual({ name: 'Slotdove', email: 'test@example.invalid' });
+  expect(body.to).toEqual([{ email: 'nobody@example.invalid' }]);
+  vi.unstubAllEnvs();
+});

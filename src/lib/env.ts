@@ -17,6 +17,7 @@ export function checkEnv(): Check[] {
     { key: 'SUPABASE_SECRET_KEY', ok: looks.secret(v('SUPABASE_SECRET_KEY')), required: true, hint: 'sb_secret_… – nur auf dem Server, niemals mit NEXT_PUBLIC_' },
     { key: 'NEXT_PUBLIC_SITE_URL', ok: looks.site(v('NEXT_PUBLIC_SITE_URL')), required: false, hint: 'https://slotdove.vercel.app (für Links in E-Mails)' },
     { key: 'RESEND_API_KEY', ok: looks.resend(v('RESEND_API_KEY')), required: false, hint: 're_… für E-Mail-Versand' },
+    { key: 'BREVO_API_KEY', ok: !!v('BREVO_API_KEY'), required: false, hint: 'xkeysib-… (kostenlos, ohne eigene Domain) – hat Vorrang vor Resend' },
     { key: 'EMAIL_FROM', ok: /@/.test(v('EMAIL_FROM')), required: false, hint: 'Slotdove <termine@deine-domain.de>' },
     { key: 'GROQ_API_KEY', ok: looks.groq(v('GROQ_API_KEY')), required: false, hint: 'gsk_… für die smarte KI' },
     { key: 'RATE_LIMIT_SECRET', ok: v('RATE_LIMIT_SECRET').length >= 32, required: false, hint: 'Zufälliger Text, mind. 32 Zeichen (sonst wird der Server-Schlüssel genutzt)' },

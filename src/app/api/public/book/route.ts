@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         booking_number: number?.booking_number,
         management_url: `${new URL(request.url).origin}/manage#token=${token}`,
         email_status:
-          process.env.RESEND_API_KEY && process.env.EMAIL_FROM ? 'queued' : 'unavailable',
+          (process.env.RESEND_API_KEY || process.env.BREVO_API_KEY) && process.env.EMAIL_FROM ? 'queued' : 'unavailable',
       },
       201,
     );

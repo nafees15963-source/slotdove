@@ -1690,7 +1690,7 @@ function EmailStatus({ action }: { action: ActionFn }) {
   }, [load]);
   if (!s) return <div className="skeleton-grid">{Array.from({ length: 3 }, (_, i) => <div className="skeleton" key={i} />)}</div>;
   const checks: [boolean, string, string][] = [
-    [s.resend_key, de ? 'Resend-Schlüssel (RESEND_API_KEY)' : 'Resend key (RESEND_API_KEY)', de ? 'In Vercel → Settings → Environment Variables eintragen.' : 'Add in Vercel → Settings → Environment Variables.'],
+    [s.resend_key, de ? 'E-Mail-Schlüssel (BREVO_API_KEY oder RESEND_API_KEY)' : 'Resend key (RESEND_API_KEY)', de ? 'In Vercel → Settings → Environment Variables eintragen.' : 'Add in Vercel → Settings → Environment Variables.'],
     [
       !!s.email_from,
       `${de ? 'Absender (EMAIL_FROM)' : 'Sender (EMAIL_FROM)'}${s.email_from ? `: ${s.email_from}` : s.email_from_raw ? ` – ${de ? 'ungültig' : 'invalid'}: „${s.email_from_raw}“` : ''}`,
@@ -1989,6 +1989,8 @@ function LeadDrawer({ lead, onClose, action, reload }: { lead: Lead; onClose: ()
                     toast.message(
                       why === 'DOMAIN_NOT_VERIFIED'
                         ? de ? 'Resend blockiert: Ohne eigene, verifizierte Domain darf nur an deine eigene Adresse gesendet werden. Link unten kopieren und selbst schicken.' : 'Resend blocked: verify a domain first. Copy the link below.'
+                        : why === 'SENDER_NOT_VERIFIED'
+                          ? de ? 'Brevo blockiert: Absender-Adresse (EMAIL_FROM) ist in Brevo noch nicht bestätigt. Link unten kopieren.' : 'Brevo blocked: sender address not verified. Copy the link below.'
                         : why === 'NOT_CONFIGURED'
                           ? de ? 'E-Mail-Versand nicht eingerichtet – Link unten kopieren und selbst schicken.' : 'Email not configured – copy the link below.'
                           : de ? `E-Mail fehlgeschlagen (${why}) – Link unten kopieren.` : `Email failed (${why}) – copy the link below.`,

@@ -1,6 +1,6 @@
 # Supabase-Auth-E-Mails über Resend
 
-Die App selbst verschickt alle anderen E-Mails direkt über Resend (`RESEND_API_KEY`, `EMAIL_FROM`).
+Die App selbst verschickt alle anderen E-Mails direkt über Brevo (`BREVO_API_KEY`, kostenlos, ohne eigene Domain – hat Vorrang) oder Resend (`RESEND_API_KEY`, braucht verifizierte Domain), jeweils mit `EMAIL_FROM`.
 Registrierung, Passwort-Reset und E-Mail-Änderung verschickt Supabase. So laufen auch diese über Resend:
 
 1. Supabase-Dashboard → **Authentication → Emails → SMTP Settings** → „Enable custom SMTP“
