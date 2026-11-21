@@ -59,17 +59,18 @@ export async function Landing() {
     <>
       <MarketingNav />
       <main className="landing">
-        <section className="l-hero l-hero-dark">
+        <section className="l-hero l-hero-paper">
           <div className="l-glow" aria-hidden />
           <div className="market-container l-hero-grid">
             <div className="l-hero-copy">
               <span className="l-pill">
-                <Sparkles size={14} /> {de ? `Kostenloses Testprojekt ab ${from} · Voranmeldung offen` : `Free test project from ${from} · pre-registration open`}
+                <span className="l-free">{de ? 'Kostenlos' : 'Free'}</span> {de ? `Testprojekt ab ${from} · Voranmeldung offen` : `test project from ${from} · pre-registration open`}
               </span>
               <h1>
-                {de ? 'Termine planen.' : 'Scheduling,'}
+                {de ? 'Termine, die sich' : 'Appointments that'}{' '}
+                <em className="l-serif">{de ? 'von selbst' : 'book'}</em>
                 <br />
-                <span className="l-grad">{de ? 'So einfach wie eine Nachricht.' : 'as easy as a text message.'}</span>
+                {de ? 'buchen.' : 'themselves.'}
               </h1>
               <p>
                 {de
@@ -77,10 +78,10 @@ export async function Landing() {
                   : `Online booking, calendar, customer chat and reminders for small businesses. Free from ${from} to ${until} – no subscription, no payment details.`}
               </p>
               <div className="l-cta">
-                <Link className="btn btn-light btn-lg" href="#warteliste">
+                <Link className="btn btn-primary btn-lg" href="#warteliste">
                   {de ? 'Kostenlos voranmelden' : 'Pre-register for free'} <ArrowRight size={16} />
                 </Link>
-                <Link className="btn btn-glass btn-lg" href="#features">
+                <Link className="btn btn-outline btn-lg" href="#features">
                   {de ? 'Funktionen ansehen' : 'See features'}
                 </Link>
               </div>
@@ -106,7 +107,7 @@ export async function Landing() {
                   </span>
                   <small>{de ? 'Heute · Salon Aurora' : 'Today · Salon Aurora'}</small>
                 </div>
-                <div className="l-mock-greet">{de ? 'Guten Morgen! 👋' : 'Good morning! 👋'}</div>
+                <div className="l-mock-greet">{de ? 'Guten Morgen.' : 'Good morning.'}</div>
                 <div className="l-mock-input">
                   <Sparkles size={14} />
                   <span className="viz-typing">{de ? 'Morgen 14 Uhr Färben Anna' : 'Tomorrow 2pm colour Anna'}</span>
@@ -139,7 +140,7 @@ export async function Landing() {
                 <span className="l-book">{de ? 'Jetzt buchen' : 'Book now'}</span>
               </div>
               <div className="l-mock-card toast">
-                🔔 {de ? 'Neue Buchung: Anna, morgen 14:00' : 'New booking: Anna, tomorrow 2pm'}
+                <span className="l-toast-dot" aria-hidden /> {de ? 'Neue Buchung: Anna, morgen 14:00' : 'New booking: Anna, tomorrow 2pm'}
               </div>
             </div>
           </div>
@@ -148,7 +149,7 @@ export async function Landing() {
           <div className="l-marquee-track">
             {[...row, ...row].map((i, n) => (
               <span key={n}>
-                {i.emoji} {de ? i.de : i.en}
+                {de ? i.de : i.en}
               </span>
             ))}
           </div>
@@ -329,12 +330,9 @@ export async function Landing() {
         </section>
         <section className="market-container l-section">
           <div className="l-final">
-            <div className="l-final-icons" aria-hidden>
-              <Zap size={20} />
-              <Heart size={20} />
-              <ShieldCheck size={20} />
-            </div>
-            <h2>{de ? 'Bereit für weniger Telefon und mehr Zeit?' : 'Ready for fewer calls and more time?'}</h2>
+            <h2>
+              {de ? 'Weniger Telefon.' : 'Fewer calls.'} <em className="l-serif">{de ? 'Mehr Zeit.' : 'More time.'}</em>
+            </h2>
             <p>{de ? 'Leg jetzt los – in 2 Minuten ist deine Buchungsseite online.' : 'Start now – your booking page is online in 2 minutes.'}</p>
             <Link className="btn btn-light btn-lg" href="#warteliste">
               {de ? 'Kostenlos voranmelden' : 'Pre-register for free'} <ArrowRight size={16} />

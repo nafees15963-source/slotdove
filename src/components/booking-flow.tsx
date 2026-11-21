@@ -189,7 +189,14 @@ export function BookingFlow({ slug }: { slug: string }) {
   return (
     <div className="bk" style={{ ['--accent' as string]: accent }}>
       <header className="bk-top">
-        <Brand />
+        {b ? (
+          <span className="bk-top-name">
+            <span className="bk-top-mark">{b.name.slice(0, 1)}</span>
+            <span className="bk-top-text">{b.name}</span>
+          </span>
+        ) : (
+          <Brand />
+        )}
         <Preferences />
       </header>
       {loading ? (
@@ -238,25 +245,29 @@ export function BookingFlow({ slug }: { slug: string }) {
             {b.is_demo && <span className="badge badge-amber">{t.demo}</span>}
           </section>
           {!receipt && (
-            <ol className="bk-progress" aria-label={dl ? 'Fortschritt' : 'Progress'}>
-              {steps.map((label, i) => (
-                <li key={label} className={i < step ? 'done' : i === step ? 'on' : ''}>
-                  <button disabled={i > step} onClick={() => i < step && setStep(i)}>
-                    <span>{i < step ? <Check size={12} /> : i + 1}</span>
-                    <em>{label}</em>
-                  </button>
-                </li>
-              ))}
-            </ol>
+            <div className="bk-steps" aria-label={dl ? 'Fortschritt' : 'Progress'}>
+              <div className="bk-steps-text">
+                <span>
+                  {dl ? 'Schritt' : 'Step'} {step + 1} {dl ? 'von' : 'of'} {steps.length}
+                </span>
+                <strong>{steps[step]}</strong>
+              </div>
+              <div className="bk-steps-bar" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={step + 1}>
+                <span style={{ transform: `scaleX(${(step + 1) / steps.length})` }} />
+              </div>
+            </div>
           )}
           <div className={`bk-grid ${receipt ? 'done' : ''}`}>
             <section className="bk-card" key={receipt ? 'done' : step}>
               {receipt ? (
                 <div className="bk-success">
-                  <div className="bk-check">
-                    <Check size={34} />
+                  <div className="bk-check" aria-hidden>
+                    <span className="bk-check-ring" />
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path className="bk-check-path" d="M5 12.5l4.5 4.5L19 7.5" />
+                    </svg>
                   </div>
-                  <h2>{receipt.status === 'pending' ? (dl ? 'Anfrage gesendet! 📨' : 'Request sent! 📨') : dl ? 'Gebucht! 🎉' : 'Booked! 🎉'}</h2>
+                  <h2>{receipt.status === 'pending' ? (dl ? 'Anfrage gesendet.' : 'Request sent.') : dl ? 'Du bist gebucht.' : 'You are booked.'}</h2>
                   <p className="muted">{receipt.status === 'pending' ? (dl ? 'Das Unternehmen bestätigt deine Anfrage in Kürze.' : 'The business will confirm your request shortly.') : dl ? 'Wir freuen uns auf dich!' : 'We look forward to seeing you!'}</p>
                   {receipt.booking_number && (
                     <button

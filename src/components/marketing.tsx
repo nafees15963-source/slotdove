@@ -34,7 +34,7 @@ export async function MarketingNav() {
           </Button>
           <Button asChild>
             <Link href="/#warteliste">
-              {t.start === 'Jetzt starten' ? 'Frühzugang' : 'Early access'}
+              {t.start === 'Jetzt starten' ? 'Voranmelden' : 'Pre-register'}
               <ArrowUpRight size={14} />
             </Link>
           </Button>

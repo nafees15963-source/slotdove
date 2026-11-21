@@ -31,8 +31,10 @@ export function Preferences() {
         aria-label={t.theme}
         onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
       >
-        <Sun className="dark-only" size={17} />
-        <Moon className="light-only" size={17} />
+        <span className="icon-swap theme-swap" aria-hidden>
+          <Sun className="swap-sun" size={17} />
+          <Moon className="swap-moon" size={17} />
+        </span>
       </button>
     </div>
   );

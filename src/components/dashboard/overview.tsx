@@ -10,7 +10,6 @@ import { BookingDetail } from './forms';
 import { Status } from './common';
 import type { Booking } from '@/lib/types';
 import { computeInsights } from '@/lib/ai/insights';
-import { industryById } from '@/lib/industries';
 
 export function Overview() {
   const w = useWorkspace(),
@@ -38,18 +37,15 @@ export function Overview() {
     { label: de ? 'Buchungsseite veröffentlichen' : 'Publish booking page', done: w.business.published, href: '/dashboard/booking' },
   ];
   const progress = checks.filter((c) => c.done).length;
-  const industry = industryById(w.business.industry);
   const now = new Date().toISOString();
   return (
     <>
-      <section className="hero-card">
+      <section className="hero-card day-head">
         <div>
           <div className="eyebrow">
-            {industry.emoji} {new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz }).format(new Date())}
+            {new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz }).format(new Date())}
           </div>
-          <h1>
-            {greeting}! <span className="wave">👋</span>
-          </h1>
+          <h1>{greeting}.</h1>
           <p>
             {todays.length
               ? de
@@ -62,10 +58,10 @@ export function Overview() {
         </div>
         {w.role !== 'staff' && (
           <div className="hero-actions-row">
-            <button className="btn btn-light" onClick={() => ui.openBooking()}>
+            <button className="btn btn-primary" onClick={() => ui.openBooking()}>
               <Plus size={16} /> {de ? 'Neuer Termin' : 'New appointment'}
             </button>
-            <Link className="btn btn-glass" href="/dashboard/calendar">
+            <Link className="btn btn-outline" href="/dashboard/calendar">
               <CalendarDays size={16} /> {de ? 'Kalender öffnen' : 'Open calendar'}
             </Link>
           </div>
@@ -186,7 +182,7 @@ export function Overview() {
             <div className="panel panel-body insights-card" data-tour="insights">
               <div className="spread">
                 <h3 className="panel-title row">
-                  <Sparkles size={16} className="purple" /> {de ? 'KI-Tipps' : 'AI tips'}
+                  <Sparkles size={16} className="purple" /> {de ? 'Tipps' : 'Tips'}
                 </h3>
                 <button className="btn btn-ghost btn-sm" onClick={() => ui.openAssistant()}>
                   {de ? 'Fragen' : 'Ask'}
