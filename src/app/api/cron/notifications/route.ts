@@ -26,7 +26,7 @@ async function handle(request: Request) {
   // Accounts whose 14-day trash period is over are deleted for good (incl. files).
   await purgeDue().catch(() => 0);
   if (!emailConfigured())
-    return json({ status: 'unavailable', reason: 'Set BREVO_API_KEY (or RESEND_API_KEY) and EMAIL_FROM in Vercel.' }, 503);
+    return json({ status: 'unavailable', reason: 'Set GMAIL_USER + GMAIL_APP_PASSWORD (or BREVO_API_KEY / RESEND_API_KEY with EMAIL_FROM) in Vercel.' }, 503);
   try {
     return json(await processQueue(20));
   } catch {

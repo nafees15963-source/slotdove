@@ -15,7 +15,7 @@ import { scoreUsers } from '@/lib/ai/anomaly';
 import { ensureConversation, postMessage } from '@/lib/chat';
 import { logActivity } from '@/lib/activity';
 import { notifyTicketReply, processQueue, registerAppUrl, sendSoon } from '@/lib/notifications';
-import { emailConfigured, normalizeFrom, noticeEmail, sendEmail } from '@/lib/email';
+import { emailConfigured, emailProvider, normalizeFrom, noticeEmail, sendEmail } from '@/lib/email';
 import { line, text } from '@/lib/sanitize';
 import { csv } from '@/lib/utils';
 import { checkEnv } from '@/lib/env';
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       await registerAppUrl(request);
       const { data: stats } = await db.rpc('email_queue_stats');
       return json({
-        resend_key: !!(process.env.RESEND_API_KEY?.trim() || process.env.BREVO_API_KEY?.trim()),
+        resend_key: !!emailProvider(),
         email_from: normalizeFrom(process.env.EMAIL_FROM) || null,
         email_from_raw: process.env.EMAIL_FROM ? process.env.EMAIL_FROM.trim().slice(0, 120) : null,
         configured: emailConfigured(),

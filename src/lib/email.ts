@@ -1,4 +1,5 @@
 import 'server-only';
+import nodemailer, { type Transporter } from 'nodemailer';
 export function escapeHtml(value: string) {
   return value.replace(
     /[&<>"']/g,
@@ -65,13 +66,37 @@ export function normalizeFrom(raw: string | undefined) {
 }
 /** Which provider sends: Brevo if BREVO_API_KEY is set (free, works with a single verified
  * sender address, no own domain needed), otherwise Resend (needs a verified domain). */
-export function emailProvider(): 'brevo' | 'resend' | null {
+export function emailProvider(): 'gmail' | 'brevo' | 'resend' | null {
+  if (process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim()) return 'gmail';
   if (process.env.BREVO_API_KEY?.trim()) return 'brevo';
   if (process.env.RESEND_API_KEY?.trim()) return 'resend';
   return null;
 }
+/** Sender: EMAIL_FROM, or for Gmail simply "Slotdove <GMAIL_USER>". */
+function senderAddress() {
+  const configured = normalizeFrom(process.env.EMAIL_FROM);
+  if (emailProvider() !== 'gmail') return configured;
+  const user = process.env.GMAIL_USER!.trim().toLowerCase();
+  // Gmail only sends as the logged-in address; keep a custom display name if one was set.
+  const name = configured.match(/^(.*) <.+>$/)?.[1] || 'Slotdove';
+  return `${name} <${user}>`;
+}
 export function emailConfigured() {
-  return !!emailProvider() && !!normalizeFrom(process.env.EMAIL_FROM);
+  return !!emailProvider() && !!senderAddress();
+}
+let gmailTransport: Transporter | null = null;
+function gmail() {
+  gmailTransport ??= nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: process.env.GMAIL_USER!.trim(), pass: process.env.GMAIL_APP_PASSWORD!.replace(/\s+/g, '') },
+    disableFileAccess: true,
+    disableUrlAccess: true,
+    connectionTimeout: 10000,
+    socketTimeout: 15000,
+  });
+  return gmailTransport;
 }
 function redact(text: string) {
   return text.replace(/(re_|xkeysib-)[A-Za-z0-9_-]+/g, '[key]').slice(0, 160);
@@ -83,8 +108,26 @@ export async function sendEmail(input: {
   idempotencyKey: string;
 }) {
   const provider = emailProvider(),
-    from = normalizeFrom(process.env.EMAIL_FROM);
+    from = senderAddress();
   if (!provider || !from) return { state: 'unavailable' as const };
+  if (provider === 'gmail') {
+    if (/[\r\n]/.test(input.to + input.subject)) throw new Error('EMAIL_INVALID_HEADER');
+    try {
+      const info = await gmail().sendMail({
+        from,
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        // Stable Message-ID from the idempotency key, so clients can de-duplicate retries.
+        messageId: `<${input.idempotencyKey.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 120)}@slotdove>`,
+      });
+      return { state: 'accepted' as const, id: String(info.messageId || '') };
+    } catch (e) {
+      const code = (e as { responseCode?: number }).responseCode || 0;
+      const msg = e instanceof Error ? e.message : '';
+      throw new Error(`EMAIL_PROVIDER_${code || 'SMTP'}: ${code === 535 || /auth|Username and Password/i.test(msg) ? 'Gmail login failed – check GMAIL_USER and app password' : redact(msg)}`);
+    }
+  }
   if (provider === 'brevo') {
     const match = from.match(/^(.*) <(.+)>$/);
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
