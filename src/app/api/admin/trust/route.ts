@@ -7,6 +7,7 @@ import { text } from '@/lib/sanitize';
 import { csv } from '@/lib/utils';
 import { safeSupportUrl } from '@/lib/release';
 import { purgeAccount, restoreAccount, trashAccount } from '@/lib/trash';
+import { mailAccountCreatedByAdmin, mailAdminAccount, mailDsrReceived } from '@/lib/mailer';
 
 /** Trust & safety, GDPR requests, blocklist, statistics, platform switches and user security actions. */
 const audit = (actor: string, action: string, details: Record<string, unknown>, business_id?: string | null) =>
@@ -300,6 +301,8 @@ export async function POST(request: Request) {
         .single();
       if (error) throw error;
       await audit(user.id, 'gdpr.request_created', { case: data.case_number, type: v.type });
+      const typeDe: Record<string, string> = { access: 'Auskunft', erasure: 'Löschung', rectification: 'Berichtigung', restriction: 'Einschränkung', portability: 'Datenübertragung', objection: 'Widerspruch', withdrawal: 'Widerruf einer Einwilligung', other: 'Sonstiges' };
+      if (input.notify !== false) mailDsrReceived({ email: v.requester_email.toLowerCase(), name: v.requester_name, caseNumber: data.case_number, type: typeDe[v.type] });
       return json(data);
     }
     if (action === 'dsr-update') {
@@ -428,6 +431,7 @@ export async function POST(request: Request) {
       }
       const recovery = await db.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: `${new URL(request.url).origin}/auth/callback?next=/account/password` } });
       link = recovery.data?.properties?.action_link || null;
+      if (link) mailAdminAccount({ email, link });
       return json({ user_id: target.id, link });
     }
     if (action === 'admin-remove') {
@@ -631,6 +635,7 @@ export async function POST(request: Request) {
       });
       if (error) throw new HttpError(409, 'ACCOUNT_EXISTS');
       await audit(user.id, 'user.created', { user_id: data.user.id });
+      mailAccountCreatedByAdmin(request, { email: v.email.toLowerCase(), name: v.name });
       return json({ user_id: data.user.id, password });
     }
     throw new HttpError(400, 'INVALID_INPUT');

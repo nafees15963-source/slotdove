@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { body, failure, hashToken, HttpError, json, requireUser, sameOrigin, softRateLimit } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { mailMemberJoined } from '@/lib/mailer';
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
       p_email: user.email,
     });
     if (error) throw error;
+    if (typeof data === 'string') mailMemberJoined(request, { businessId: data, memberEmail: user.email });
     return json({ business_id: data });
   } catch (e) {
     return failure(e);

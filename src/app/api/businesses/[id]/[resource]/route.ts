@@ -21,6 +21,7 @@ import {
   softRateLimit,
 } from '@/lib/http';
 import { generatePassword, isBlocked } from '@/lib/trust';
+import { mailStaffWelcome } from '@/lib/mailer';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { csv } from '@/lib/utils';
 import { calendarFile } from '@/lib/scheduling/engine';
@@ -340,6 +341,9 @@ export async function POST(request: Request, context: Context) {
         throw e;
       }
       await admin.from('admin_audit_logs').insert({ actor_id: user.id, business_id: id, action: 'staff.account_created', details: { user_id: newUser.id, role: v.role } });
+      const { data: biz } = await admin.from('businesses').select('name,is_demo').eq('id', id).single();
+      if (biz && !biz.is_demo)
+        mailStaffWelcome(request, { email: v.email, name: v.name, business: biz.name, createdBy: (user.user_metadata?.display_name as string) || user.email || 'Dein Betrieb' });
       // The password is shown exactly once to the creator and never stored in plain text.
       return json({ user_id: newUser.id, email: v.email, password }, 201);
     }

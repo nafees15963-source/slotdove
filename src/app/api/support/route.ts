@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { body, failure, HttpError, json, rateLimit, requireBusiness, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { logActivity } from '@/lib/activity';
+import { mailSupportOpened } from '@/lib/mailer';
 import { moderate } from '@/lib/ai/moderation';
 /** Support desk for businesses: open cases with a case number, reply, close. */
 export async function GET(request: Request) {
@@ -68,6 +69,8 @@ export async function POST(request: Request) {
       if (verdict.flagged)
         await db.from('support_ticket_messages').insert({ ticket_id: ticket.id, author_kind: 'system', author_name: 'KI', body: `Automatischer Hinweis: ${verdict.reasons.join(', ')}`, internal: true });
       void logActivity(request, { user_id: user.id, business_id: input.business, action: 'support.ticket', details: { case_number: ticket.case_number } });
+      const { data: biz } = await db.from('businesses').select('name').eq('id', input.business).maybeSingle();
+      if (user.email) mailSupportOpened(request, { email: user.email, caseNumber: ticket.case_number, subject: input.subject, business: biz?.name || '' });
       return json({ ticket }, 201);
     }
     const ticketId = z.uuid().parse(input.ticket);

@@ -31,7 +31,8 @@ it('pending approval is never called a confirmed appointment', () => {
     status: 'pending',
     address: '',
   });
-  expect(r.subject).toBe('Your appointment request');
+  expect(r.subject).toBe('Your appointment request · Example');
+  expect(r.subject).not.toMatch(/confirmed/i);
 });
 it('missing sender cannot report email success', async () => {
   vi.stubEnv('RESEND_API_KEY', 'test-placeholder');

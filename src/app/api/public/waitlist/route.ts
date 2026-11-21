@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { createHmac } from 'node:crypto';
 import { after } from 'next/server';
 import { isBlocked } from '@/lib/trust';
+import { mailPreRegistration } from '@/lib/mailer';
 import { body, failure, HttpError, json, rateLimit, sameOrigin } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { email, line, phone, text } from '@/lib/sanitize';
@@ -66,25 +67,7 @@ export async function POST(request: Request) {
       : await db.from('waitlist').insert(row);
     if (error) throw error;
     void logActivity(request, { action: 'waitlist.signup', details: { company: input.company, interest: input.interest } });
-    if (emailConfigured() && !existing)
-      after(async () => {
-        const de = input.locale === 'de';
-        try {
-          await sendEmail({
-            ...noticeEmail({
-              locale: input.locale,
-              title: de ? 'Danke – Sie stehen auf der Slotdove-Warteliste' : 'Thanks – you are on the Slotdove waitlist',
-              lines: de
-                ? [`Hallo ${input.contact_name},`, `vielen Dank für Ihr Interesse an Slotdove für ${input.company}. Wir melden uns persönlich bei Ihnen, sobald Ihr Testzugang bereitsteht.`, 'Sie möchten doch nicht kontaktiert werden? Antworten Sie einfach kurz auf diese E-Mail.']
-                : [`Hello ${input.contact_name},`, `thank you for your interest in Slotdove for ${input.company}. We will contact you personally as soon as your test access is ready.`, 'Changed your mind? Simply reply to this email.'],
-            }),
-            to: input.email,
-            idempotencyKey: `waitlist-${input.email}`,
-          });
-        } catch {
-          /* confirmation is optional */
-        }
-      });
+    if (!existing) mailPreRegistration(request, { email: input.email, name: input.contact_name, company: input.company, locale: input.locale });
     return json({ ok: true }, 201);
   } catch (e) {
     if (e instanceof HttpError && e.message === 'TOO_FAST') return json({ error: 'INVALID_INPUT' }, 400);

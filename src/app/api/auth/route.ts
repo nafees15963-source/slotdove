@@ -4,6 +4,7 @@ import { body, failure, hashToken, HttpError, json, sameOrigin, softRateLimit } 
 import { logActivity } from '@/lib/activity';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { ipHash, isBlocked, LEGAL_VERSION, platformSetting } from '@/lib/trust';
+import { alertAdmin } from '@/lib/mailer';
 const schema = z.object({
   action: z.enum(['login', 'signup', 'reset', 'update', 'logout']),
   email: z.email().optional(),
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
           .from('waitlist')
           .update({ status: 'customer', invite_hash: null, updated_at: new Date().toISOString() })
           .eq('id', leadId);
+      if (signed.user) alertAdmin(request, 'Neue Registrierung', [input.email.toLowerCase(), leadId ? 'über bestätigte Voranmeldung' : 'über Team-Einladung'], `signup-${signed.user.id}`);
       await logActivity(request, { action: 'auth.signup', details: { email: input.email.toLowerCase() } });
       return json({ ok: true });
     }

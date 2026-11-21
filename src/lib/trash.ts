@@ -1,5 +1,6 @@
 import 'server-only';
 import { supabaseAdmin } from './supabase/admin';
+import { mailAccountPurged, mailAccountRestored, mailAccountTrashed } from './mailer';
 
 /** Deleted accounts first go to a 14-day trash: login blocked, businesses offline, everything restorable. */
 export async function trashAccount(userId: string, email: string, by: 'self' | 'admin') {
@@ -17,17 +18,19 @@ export async function trashAccount(userId: string, email: string, by: 'self' | '
   for (const b of owned || []) await db.from('businesses').update({ status: 'archived', published: false }).eq('id', b.id);
   await db.auth.admin.updateUserById(userId, { ban_duration: '876000h' });
   await db.from('admin_audit_logs').insert({ actor_id: userId, action: 'account.trashed', details: { by, businesses: (owned || []).length } });
+  if (email) mailAccountTrashed(null, { email, by });
 }
 
 export async function restoreAccount(userId: string, actor: string) {
   const db = supabaseAdmin();
-  const { data: row } = await db.from('account_deletions').select('businesses').eq('user_id', userId).maybeSingle();
+  const { data: row } = await db.from('account_deletions').select('businesses,email').eq('user_id', userId).maybeSingle();
   if (!row) return false;
   for (const b of (row.businesses || []) as { id: string; status: string; published: boolean }[])
     await db.from('businesses').update({ status: b.status === 'archived' ? 'active' : b.status, published: b.published }).eq('id', b.id);
   await db.auth.admin.updateUserById(userId, { ban_duration: 'none' });
   await db.from('account_deletions').delete().eq('user_id', userId);
   await db.from('admin_audit_logs').insert({ actor_id: actor, action: 'account.restored', details: { user_id: userId } });
+  if (row.email) mailAccountRestored({ email: row.email });
   return true;
 }
 
@@ -43,6 +46,8 @@ export async function purgeAccount(userId: string) {
     await db.from('businesses').delete().eq('id', b.id);
   }
   await db.from('admin_audit_logs').insert({ actor_id: userId, action: 'account.purged', details: { businesses: (owned || []).length } });
+  const { data: u } = await db.auth.admin.getUserById(userId);
+  if (u.user?.email) await mailAccountPurged(u.user.email);
   const { error } = await db.auth.admin.deleteUser(userId);
   if (error && !/not found/i.test(error.message)) throw error;
   await db.from('account_deletions').delete().eq('user_id', userId);
